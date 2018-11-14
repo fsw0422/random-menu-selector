@@ -11,6 +11,8 @@ val monocleVersion = "1.4.0"
 
 libraryDependencies ++= Seq(
   guice,
+  "com.typesafe.play" %% "play-mailer" % "6.0.1",
+  "com.typesafe.play" %% "play-mailer-guice" % "6.0.1",
   "org.typelevel" %% "cats-core" % catsVersion,
   "org.typelevel" %% "cats-macros" % catsVersion,
   "org.typelevel" %% "cats-kernel" % catsVersion,
