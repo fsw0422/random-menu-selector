@@ -13,9 +13,9 @@ class MenuController @Inject()(
 ) extends AbstractController(controllerComponents) {
 
   implicit val jsonFormat = Json.format[Menu]
+  implicit val timeout = Timeout(10 seconds)
 
   def menu() = Action.async { implicit request =>
-    implicit val timeout = Timeout(10 seconds)
     (MenuAggregate.selector ? "selectByRequest")
       .mapTo[Menu]
       .map { result =>

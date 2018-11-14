@@ -1,24 +1,34 @@
 package src.menu
-import akka.actor.{Actor, ActorSystem, Props}
-
-import scala.util.Random
+import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 
 object MenuRepository {
   val actorSystem = ActorSystem("MenuRepository")
 
   val menuRepository = actorSystem.actorOf(Props[MenuRepository])
-}
 
-class MenuRepository extends Actor {
-  val menuList = Random.shuffle(
-    List(
-      Menu("Asian", "Noodle", List("Green Onion")),
-      Menu("American", "Popcorn", List("corns"))
+  //TODO:
+  val database = List(
+    Menu(
+      "Asian",
+      "Noodle",
+      Seq("Green Onion"),
+      List("put noodle in hot water", "eat"),
+      "http://asian.example.com"
+    ),
+    Menu(
+      "American",
+      "Popcorn",
+      Seq("corns"),
+      List("put in microwave", "put butter", "eat"),
+      "http://american.example.com"
     )
   )
+}
+
+class MenuRepository extends Actor with ActorLogging {
 
   override def receive = {
     case "findAllMenus" =>
-      sender() ! menuList
+      sender() ! MenuRepository.database
   }
 }
