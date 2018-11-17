@@ -16,7 +16,7 @@ class MenuController @Inject()(
   implicit val timeout = Timeout(10 seconds)
 
   def menu() = Action.async { implicit request =>
-    (MenuAggregate.selector ? "selectByRequest")
+    (MenuAggregate.menuAggregate ? "selectByRequest")
       .mapTo[Menu]
       .map { result =>
         Ok(
