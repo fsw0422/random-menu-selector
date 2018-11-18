@@ -4,9 +4,8 @@ import java.time.LocalTime
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
-import src.menu.utils.EmailDescription
-import src.menu.utils.EmailSender
 import src.user.{User, UserAggregate}
+import src.utils.email.{EmailDescription, EmailSender}
 
 import scala.concurrent.duration._
 import scala.util.Random
@@ -60,7 +59,7 @@ class MenuAggregate extends Actor with ActorLogging {
   }
 
   private def sendEmail(menu: Menu, users: List[User]) = {
-    val emails = users.map(user => user.email).toArray
+    val to = users.map(user => user.email).toArray
     EmailSender.send(
       "smtp.gmail.com",
       "465",
@@ -71,12 +70,12 @@ class MenuAggregate extends Actor with ActorLogging {
       "menuselector0501@gmail.com",
       "utf-8",
       EmailDescription(
-        emails,
+        to,
         menu.name,
         menu.link,
-        emails,
-        emails,
-        emails
+        Array(),
+        Array(),
+        Array()
       )
     )
     users.foreach(user => log.info("Sent menu {} to {}", menu.name, user.name))

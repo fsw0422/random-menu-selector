@@ -1,4 +1,4 @@
-package src.menu.utils
+package src.utils.email
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.util.{Date, Properties}
@@ -19,7 +19,6 @@ object EmailSender {
            encoding: String,
            emailDescription: EmailDescription,
            attachmentDescriptions: AttachmentDescription*) {
-
     val props = setupSmtpServerProperties(
       sslConnection,
       smtpHost,
@@ -27,25 +26,35 @@ object EmailSender {
       verifySSLCertificate
     )
 
-    // Get a mail session
     val session = Session.getInstance(props)
 
     val m = new MimeMessage(session)
     m.setFrom(new InternetAddress(from))
 
     val to = convertStringEmailsToAddresses(emailDescription.emails)
-    val replyTo = convertStringEmailsToAddresses(emailDescription.replyToEmails)
-    val cc = convertStringEmailsToAddresses(emailDescription.ccEmails)
-    val bcc = convertStringEmailsToAddresses(emailDescription.bccEmails)
+    m.setRecipients(Message.RecipientType.TO, to)
 
-    m.setRecipients(javax.mail.Message.RecipientType.TO, to)
-    m.setRecipients(Message.RecipientType.CC, cc)
-    m.setRecipients(Message.RecipientType.BCC, bcc)
-    m.setReplyTo(replyTo)
+    if (emailDescription.replyToEmails.nonEmpty) {
+      val replyTo = convertStringEmailsToAddresses(
+        emailDescription.replyToEmails
+      )
+      m.setReplyTo(replyTo)
+    }
+
+    if (emailDescription.ccEmails.nonEmpty) {
+      val cc = convertStringEmailsToAddresses(emailDescription.ccEmails)
+      m.setRecipients(Message.RecipientType.CC, cc)
+    }
+
+    if (emailDescription.bccEmails.nonEmpty) {
+      val bcc = convertStringEmailsToAddresses(emailDescription.bccEmails)
+      m.setRecipients(Message.RecipientType.BCC, bcc)
+    }
+
     m.setSubject(emailDescription.subject, encoding)
     m.setSentDate(new Date())
 
-    if (attachmentDescriptions.length > 0) {
+    if (attachmentDescriptions.nonEmpty) {
       addAttachments(
         m,
         emailDescription.message,
@@ -65,13 +74,10 @@ object EmailSender {
     }
   }
 
-  private def setupSmtpServerProperties(
-    sslConnection: Boolean,
-    smtpHost: String,
-    smtpPort: String,
-    verifySSLCertificate: Boolean
-  ): Properties = {
-    // Setup mail server
+  private def setupSmtpServerProperties(sslConnection: Boolean,
+                                        smtpHost: String,
+                                        smtpPort: String,
+                                        verifySSLCertificate: Boolean) = {
     val props = new Properties()
     if (sslConnection) {
       props.put("mail.smtps.host", smtpHost)
@@ -89,9 +95,12 @@ object EmailSender {
   }
 
   private def createSmtpTransportFrom(session: Session,
-                                      sslConnection: Boolean): Transport = {
-    if (sslConnection) session.getTransport("smtps")
-    else session.getTransport("smtp")
+                                      sslConnection: Boolean) = {
+    if (sslConnection) {
+      session.getTransport("smtps")
+    } else {
+      session.getTransport("smtp")
+    }
   }
 
   private def sendEmail(transport: Transport,
@@ -111,15 +120,11 @@ object EmailSender {
     }
   }
 
-  private def convertStringEmailsToAddresses(
-    emails: Array[String]
-  ): Array[Address] = {
+  private def convertStringEmailsToAddresses(emails: Array[String]) = {
     val addresses = new Array[Address](emails.length)
-
-    for (i <- 0 until emails.length) {
+    for (i <- emails.indices) {
       addresses(i) = new InternetAddress(emails(i))
     }
-
     addresses
   }
 
@@ -128,7 +133,6 @@ object EmailSender {
                              encoding: String,
                              attachmentDescriptions: AttachmentDescription*) {
     val multiPart = new MimeMultipart()
-
     val textPart = new MimeBodyPart()
     multiPart.addBodyPart(textPart)
     textPart.setText(msg, encoding, "plain")
@@ -138,27 +142,28 @@ object EmailSender {
       multiPart.addBodyPart(binaryPart)
 
       val ds = new DataSource() {
-        def getInputStream = {
+        override def getInputStream = {
           new ByteArrayInputStream(attachmentDescription.content)
         }
 
-        def getOutputStream = {
+        override def getOutputStream = {
           val byteStream = new ByteArrayOutputStream()
           byteStream.write(attachmentDescription.content)
           byteStream
         }
 
-        def getContentType = {
+        override def getContentType = {
           attachmentDescription.contentType
         }
 
-        def getName = {
+        override def getName = {
           attachmentDescription.filename
         }
       }
+
       binaryPart.setDataHandler(new DataHandler(ds))
       binaryPart.setFileName(attachmentDescription.filename)
-      binaryPart.setDescription("")
+      binaryPart.setDescription(attachmentDescription.description)
     }
 
     mimeMessage.setContent(multiPart)
