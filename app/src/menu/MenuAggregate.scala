@@ -1,7 +1,6 @@
 package src.menu
-import java.time.LocalTime
-
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
+import akka.stream.ThrottleMode.Shaping
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
 import akka.util.Timeout
@@ -21,18 +20,6 @@ class MenuAggregate extends Actor with ActorLogging {
     ActorMaterializer(ActorMaterializerSettings(context.system))(context.system)
   implicit val timeout = Timeout(5 seconds)
 
-  context.system.scheduler.schedule(initialDelay = {
-    val time = LocalTime.of(13, 0).toSecondOfDay
-    val now = LocalTime.now().toSecondOfDay
-    val difference = time - now
-    if (difference < 0) {
-      val fullDay = 60 * 60 * 24
-      fullDay + difference
-    } else {
-      difference
-    }
-  } seconds, interval = 1 hours, receiver = self, message = "selectMenu")
-
   var requester: ActorRef = sender()
 
   override def receive = {
@@ -50,6 +37,7 @@ class MenuAggregate extends Actor with ActorLogging {
   private def menuSelector =
     Source
       .queue[String](5, OverflowStrategy.backpressure)
+      .throttle(1, 2 seconds, 3, Shaping)
       .ask[List[Menu]](5)(
         MenuRepository.actorSystem.actorOf(Props[MenuRepository])
       )
@@ -64,6 +52,7 @@ class MenuAggregate extends Actor with ActorLogging {
   private def emailer(menu: Menu) =
     Source
       .queue[String](5, OverflowStrategy.backpressure)
+      .throttle(1, 2 seconds, 3, Shaping)
       .ask[List[User]](
         MenuRepository.actorSystem.actorOf(Props[UserAggregate])
       )
