@@ -1,11 +1,9 @@
 package src.menu
-import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
+import akka.actor.{Actor, ActorLogging, ActorSystem}
 import akka.pattern.pipe
 
 object MenuRepository {
   val actorSystem = ActorSystem("MenuRepository")
-
-  val menuRepository = actorSystem.actorOf(Props[MenuRepository])
 }
 
 class MenuRepository extends Actor with ActorLogging {

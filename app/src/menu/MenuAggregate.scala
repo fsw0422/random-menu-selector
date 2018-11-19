@@ -1,8 +1,9 @@
 package src.menu
 import java.time.LocalTime
 
-import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
-import akka.pattern.{ask, pipe}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
+import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
 import akka.util.Timeout
 import src.user.{User, UserAggregate}
 import src.utils.email.{EmailDescription, EmailSender}
@@ -12,50 +13,66 @@ import scala.util.Random
 
 object MenuAggregate {
   val actorSystem = ActorSystem("MenuAggregate")
-
-  val menuAggregate = actorSystem.actorOf(Props[MenuAggregate])
 }
 
 class MenuAggregate extends Actor with ActorLogging {
   implicit val executionContext = context.dispatcher
+  implicit val actorMaterializer =
+    ActorMaterializer(ActorMaterializerSettings(context.system))(context.system)
   implicit val timeout = Timeout(5 seconds)
 
-  context.system.scheduler.schedule(
-    initialDelay = {
-      val time = LocalTime.of(13, 0).toSecondOfDay
-      val now = LocalTime.now().toSecondOfDay
-      val difference = time - now
-      if (difference < 0) {
-        val fullDay = 60 * 60 * 24
-        fullDay + difference
-      } else {
-        difference
-      }
-    } seconds,
-    interval = 24 hours,
-    receiver = self,
-    message = "selectByScheduler"
-  )
+  context.system.scheduler.schedule(initialDelay = {
+    val time = LocalTime.of(13, 0).toSecondOfDay
+    val now = LocalTime.now().toSecondOfDay
+    val difference = time - now
+    if (difference < 0) {
+      val fullDay = 60 * 60 * 24
+      fullDay + difference
+    } else {
+      difference
+    }
+  } seconds, interval = 1 hours, receiver = self, message = "selectMenu")
+
+  var requester: ActorRef = sender()
 
   override def receive = {
-    case "selectByRequest" =>
-      pipe(selectMenu).to(sender())
-    case "selectByScheduler" =>
-      selectMenu
+    case cmd: String =>
+      cmd match {
+        case "selectMenu" =>
+          requester = sender()
+          selectMenu
+      }
+    case menu: Menu =>
+      emailAllUsers(menu)
+      requester ! menu
   }
 
+  private def menuSelector =
+    Source
+      .queue[String](5, OverflowStrategy.backpressure)
+      .ask[List[Menu]](5)(
+        MenuRepository.actorSystem.actorOf(Props[MenuRepository])
+      )
+      .to(Sink.foreach(menus => self ! Random.shuffle(menus).head))
+      .run()
+
   private def selectMenu = {
-    (MenuRepository.menuRepository ? "findAllMenus")
-      .mapTo[List[Menu]]
-      .map { menus =>
-        val menu = Random.shuffle(menus).head
+    //TODO: send result back to repo
+    menuSelector offer "findAllMenus"
+  }
 
-        (UserAggregate.userAggregate ? "getAllUsers")
-          .mapTo[List[User]]
-          .map(users => sendEmail(menu, users))
+  private def emailer(menu: Menu) =
+    Source
+      .queue[String](5, OverflowStrategy.backpressure)
+      .ask[List[User]](
+        MenuRepository.actorSystem.actorOf(Props[UserAggregate])
+      )
+      .to(Sink.foreach(users => sendEmail(menu, users)))
+      .run()
 
-        menu
-      }
+  private def emailAllUsers(menu: Menu) = {
+    //TODO: send result back to repo
+    emailer(menu) offer "getAllUsers"
   }
 
   private def sendEmail(menu: Menu, users: List[User]) = {
@@ -69,15 +86,7 @@ class MenuAggregate extends Actor with ActorLogging {
       true,
       "menuselector0501@gmail.com",
       "utf-8",
-      EmailDescription(
-        to,
-        menu.name,
-        menu.link,
-        Array(),
-        Array(),
-        Array()
-      )
+      EmailDescription(to, menu.name, menu.link, Array(), Array(), Array())
     )
-    users.foreach(user => log.info("Sent menu {} to {}", menu.name, user.name))
   }
 }

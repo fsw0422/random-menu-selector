@@ -1,11 +1,9 @@
 package src.user
-import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
+import akka.actor.{Actor, ActorLogging, ActorSystem}
 import akka.pattern.pipe
 
 object UserRepository {
   val actorSystem = ActorSystem("UserRepository")
-
-  val userRepository = actorSystem.actorOf(Props[UserRepository])
 }
 
 class UserRepository extends Actor with ActorLogging {
