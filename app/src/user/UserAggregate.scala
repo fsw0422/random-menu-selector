@@ -1,10 +1,7 @@
 package src.user
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
-import akka.stream.{
-  ActorMaterializer,
-  ActorMaterializerSettings,
-  OverflowStrategy
-}
+import akka.stream.ThrottleMode.Shaping
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 
@@ -34,6 +31,7 @@ class UserAggregate extends Actor with ActorLogging {
   private def userSelector = {
     Source
       .queue[String](5, OverflowStrategy.backpressure)
+      .throttle(1, 2 seconds, 3, Shaping)
       .ask[List[User]](5)(
         UserAggregate.actorSystem.actorOf(Props[UserRepository])
       )
