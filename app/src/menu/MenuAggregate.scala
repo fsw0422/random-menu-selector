@@ -2,7 +2,11 @@ package src.menu
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.stream.ThrottleMode.Shaping
 import akka.stream.scaladsl.{Sink, Source}
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
+import akka.stream.{
+  ActorMaterializer,
+  ActorMaterializerSettings,
+  OverflowStrategy
+}
 import akka.util.Timeout
 import src.user.{User, UserAggregate}
 import src.utils.email.{EmailDescription, EmailSender}
@@ -41,7 +45,7 @@ class MenuAggregate extends Actor with ActorLogging {
       .ask[List[Menu]](5)(
         MenuRepository.actorSystem.actorOf(Props[MenuRepository])
       )
-      .to(Sink.foreach(menus => self ! Random.shuffle(menus).head))
+      .to(Sink.foreach(menus => self forward Random.shuffle(menus).head))
       .run()
 
   private def selectMenu = {
@@ -53,9 +57,7 @@ class MenuAggregate extends Actor with ActorLogging {
     Source
       .queue[String](5, OverflowStrategy.backpressure)
       .throttle(1, 2 seconds, 3, Shaping)
-      .ask[List[User]](
-        MenuRepository.actorSystem.actorOf(Props[UserAggregate])
-      )
+      .ask[List[User]](MenuRepository.actorSystem.actorOf(Props[UserAggregate]))
       .to(Sink.foreach(users => sendEmail(menu, users)))
       .run()
 
@@ -74,8 +76,41 @@ class MenuAggregate extends Actor with ActorLogging {
       true,
       true,
       "menuselector0501@gmail.com",
-      "utf-8",
-      EmailDescription(to, menu.name, menu.link, Array(), Array(), Array())
+      "text/html; charset=utf-8",
+      EmailDescription(
+        to,
+        "Today's Menu",
+        s"""
+        <html>
+          <head>
+            <title>Today's Menu</title>
+          </head>
+          <body>
+            <b>Ingredients</b>
+            <p>
+          ${menu.ingredients
+          .foldLeft[String]("")((s, ingredient) => s + "<br>" + ingredient)}
+            </p>
+            <br>
+
+            <b>Recipe</b>
+            <p>
+          ${menu.recipe
+          .foldLeft[String]("")((s, instruction) => s + "<br>" + instruction)}
+            </p>
+            <br>
+
+            <b>Link</b>
+            <p>
+            <a href=${menu.link}>${menu.name}</a>
+            </p>
+          </body>
+        </html>
+          """,
+        Array(),
+        Array(),
+        Array()
+      )
     )
   }
 }

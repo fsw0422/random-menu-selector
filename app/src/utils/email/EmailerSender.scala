@@ -62,7 +62,7 @@ object EmailSender {
         attachmentDescriptions: _*
       )
     } else {
-      m.setText(emailDescription.message, encoding, "plain")
+      m.setContent(emailDescription.message, encoding)
     }
 
     val transport = createSmtpTransportFrom(session, sslConnection)
