@@ -49,7 +49,7 @@ class MenuAggregate extends Actor with ActorLogging {
       .run()
 
   private def selectMenu = {
-    //TODO: send result back to repo
+    //TODO: log metrics
     menuSelector offer "findAllMenus"
   }
 
@@ -62,7 +62,7 @@ class MenuAggregate extends Actor with ActorLogging {
       .run()
 
   private def emailAllUsers(menu: Menu) = {
-    //TODO: send result back to repo
+    //TODO: log metrics
     emailer(menu) offer "getAllUsers"
   }
 

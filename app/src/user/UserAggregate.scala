@@ -42,6 +42,7 @@ class UserAggregate extends Actor with ActorLogging {
   }
 
   private def findAllUsers = {
+    //TODO: log metrics
     userSelector offer "findAllUsers"
   }
 }
