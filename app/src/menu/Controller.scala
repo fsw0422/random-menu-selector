@@ -4,15 +4,13 @@ import akka.stream.QueueOfferResult
 import javax.inject._
 import play.api.libs.json.Json
 import play.api.mvc._
-import src.menu.view.View
 
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class Controller @Inject()(
-  implicit controllerComponents: ControllerComponents,
-  executionContext: ExecutionContext
-) extends AbstractController(controllerComponents) {
+class Controller @Inject()(implicit controllerComponents: ControllerComponents,
+                           executionContext: ExecutionContext)
+    extends AbstractController(controllerComponents) {
 
   def askRandomMenu() = Action.async(parse.formUrlEncoded) { implicit request =>
     Aggregate

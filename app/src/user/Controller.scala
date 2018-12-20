@@ -6,8 +6,6 @@ import play.api.mvc._
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class Controller @Inject()(
-  implicit controllerComponents: ControllerComponents,
-  executionContext: ExecutionContext
-) extends AbstractController(controllerComponents) {
-}
+class Controller @Inject()(implicit controllerComponents: ControllerComponents,
+                           executionContext: ExecutionContext)
+    extends AbstractController(controllerComponents) {}

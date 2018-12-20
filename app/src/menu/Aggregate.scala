@@ -8,9 +8,8 @@ import akka.stream.ThrottleMode.Shaping
 import akka.stream.scaladsl.Source
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
 import play.api.libs.json.Json
-import src.menu.event.{EventRepository, MenuEvent, RandomMenuSelectedEvent}
-import src.menu.view.{MenuView, View}
-import src.user.view.UserView
+import src.user
+import src.user.UserView
 import src.utils.email.{EmailDescription, EmailSender}
 
 import scala.concurrent.duration._
@@ -27,26 +26,22 @@ object Aggregate {
   )
 
   /*
-   * Event bus stream that acts as a broker between aggregate and
-   * - Event Store which stores the events
+   * Event.scala bus stream that acts as a broker between aggregate and
+   * - Event.scala Store which stores the events
    * - View component that constructs / persists view models
    */
   private val eventBus = Source
     .queue[MenuEvent](5, OverflowStrategy.backpressure)
     .throttle(1, 2 seconds, 3, Shaping)
-    .alsoTo(EventRepository.storeEvent)
-    .to(View.constructView)
+    .alsoTo(MenuEventService.storeEvent)
+    .to(MenuViewService.constructView)
     .run()
 
   def selectRandomMenu() = {
-    val randomMenu = Random.shuffle(View.findAll()).head
-    val users = src.user.view.View.findAll()
+    val randomMenu = Random.shuffle(MenuView.findAll()).head
+    val users = user.View.findAll()
     sendEmail(randomMenu, users)
-    eventBus offer RandomMenuSelectedEvent(
-      UUID.randomUUID(),
-      DateTime.now.clicks,
-      Json.toJson(randomMenu)
-    )
+    eventBus offer MenuEvent("RandomMenuSelectedEvent", "")
   }
 
   private def sendEmail(menu: MenuView, users: List[UserView]) = {

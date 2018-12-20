@@ -12,6 +12,7 @@ val monocleVersion = "1.4.0"
 libraryDependencies ++= Seq(
   guice,
   "javax.mail" % "mail" % "1.4.7",
+  "com.typesafe.slick" %% "slick" % "3.2.3",
   "org.typelevel" %% "cats-core" % catsVersion,
   "org.typelevel" %% "cats-macros" % catsVersion,
   "org.typelevel" %% "cats-kernel" % catsVersion,
