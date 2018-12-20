@@ -3,7 +3,7 @@ package src.menu
 import akka.stream.scaladsl.Sink
 
 case class MenuEvent(id: Option[Long],
-                     timestamp: Long,
+                     timestamp: Option[Long],
                      typ: String,
                      data: String)
 
@@ -25,7 +25,7 @@ object MenuEventRepository {
     def data = column[String]("DATA")
 
     def * =
-      (id.?, timeStamp, typ, data) <> (MenuEvent.tupled, MenuEvent.unapply)
+      (id.?, timeStamp.?, typ, data) <> (MenuEvent.tupled, MenuEvent.unapply)
   }
 
   private val menuEventTable = TableQuery[MenuEventTable]

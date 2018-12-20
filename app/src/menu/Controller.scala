@@ -23,3 +23,7 @@ class Controller @Inject()(implicit controllerComponents: ControllerComponents,
       }
   }
 }
+
+object JsonFormatter {
+  implicit val jsonFormat = Json.format[MenuView]
+}

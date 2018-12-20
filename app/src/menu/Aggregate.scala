@@ -1,15 +1,11 @@
 package src.menu
 
-import java.util.UUID
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.DateTime
 import akka.stream.ThrottleMode.Shaping
 import akka.stream.scaladsl.Source
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
-import play.api.libs.json.Json
-import src.user
-import src.user.UserView
+import src.user.{UserView, UserViewService}
 import src.utils.email.{EmailDescription, EmailSender}
 
 import scala.concurrent.duration._
@@ -38,10 +34,10 @@ object Aggregate {
     .run()
 
   def selectRandomMenu() = {
-    val randomMenu = Random.shuffle(MenuView.findAll()).head
-    val users = user.View.findAll()
+    val randomMenu = Random.shuffle(MenuViewService.findAll()).head
+    val users = UserViewService.findAll()
     sendEmail(randomMenu, users)
-    eventBus offer MenuEvent("RandomMenuSelectedEvent", "")
+    eventBus offer MenuEvent(None, Option(DateTime.now.clicks), "RandomMenuSelectedEvent", "data")
   }
 
   private def sendEmail(menu: MenuView, users: List[UserView]) = {
