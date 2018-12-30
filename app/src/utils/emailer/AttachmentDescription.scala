@@ -1,4 +1,4 @@
-package src.utils.email
+package src.utils.emailer
 
 case class AttachmentDescription(content: Array[Byte],
                                  filename: String,

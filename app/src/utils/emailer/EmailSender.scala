@@ -1,4 +1,4 @@
-package src.utils.email
+package src.utils.emailer
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.util.{Date, Properties}

@@ -1,6 +1,8 @@
-# Routes
-# This file defines all application routes (Higher priority routes first)
-# https://www.playframework.com/documentation/latest/ScalaRouting
+# Menu
+POST     /menu                       src.menu.Controller.createOrUpdateMenu()
+POST     /menu/random                src.menu.Controller.selectRandomMenu()
+POST     /menu/view                  src.menu.Controller.createOrUpdateMenuViewSchema()
 
-# An example controller showing a sample home page
-POST     /menu                           src.menu.Controller.askRandomMenu()
+# User
+POST     /user                       src.user.Controller.createOrUpdateUser()
+POST     /user/view                  src.user.Controller.createOrUpdateUserViewSchema()

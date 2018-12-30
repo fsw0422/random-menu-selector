@@ -1,4 +1,4 @@
-package src.utils.email
+package src.utils.emailer
 
 case class EmailDescription(emails: Array[String],
                             subject: String,
