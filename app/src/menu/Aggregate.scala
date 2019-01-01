@@ -87,6 +87,7 @@ object Aggregate {
             <title>Today's Menu</title>
           </head>
           <body>
+
             <b>Ingredients</b>
             <p>
           ${menu.ingredients
@@ -105,6 +106,7 @@ object Aggregate {
             <p>
             <a href=${menu.link}>${menu.name}</a>
             </p>
+
           </body>
         </html>
           """,

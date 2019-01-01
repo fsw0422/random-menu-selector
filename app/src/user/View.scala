@@ -6,7 +6,6 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json
 import src.EventType.EventType
 import src.{Event, EventDao, EventType}
-
 import scala.concurrent.Future
 
 case class UserView(id: Option[Long] = None,
@@ -16,7 +15,8 @@ case class UserView(id: Option[Long] = None,
 object UserView {
   import src.utils.mapper.JsMapper._
 
-  implicit val jsonFormat = Json.using[Json.WithDefaultValues].format[UserView]
+  implicit val jsonFormat =
+    Json.using[Json.WithDefaultValues].format[UserView]
 }
 
 object UserViewService {
@@ -25,7 +25,6 @@ object UserViewService {
     event.`type` match {
       case EventType.USER_PROFILE_CREATED_OR_UPDATED =>
         val userView = event.data.as[UserView]
-        println(userView.name)
         UserViewDao.upsert(userView)
       case EventType.USER_SCHEMA_CREATED_OR_UPDATED =>
         val targetVersion = (event.data \ "version").as[String]
