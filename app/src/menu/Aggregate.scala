@@ -3,15 +3,27 @@ package src.menu
 import akka.actor.ActorSystem
 import akka.stream.ThrottleMode.Shaping
 import akka.stream.scaladsl.Source
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
+import akka.stream.{
+  ActorMaterializer,
+  ActorMaterializerSettings,
+  OverflowStrategy
+}
+import com.typesafe.scalalogging.LazyLogging
+import javax.inject.{Inject, Singleton}
 import play.api.libs.json.JsValue
 import src.user.{UserView, UserViewService}
 import src.{Event, EventService, EventType}
-import src.utils.emailer.{EmailDescription, EmailSender}
+import src.utils.{Email, EmailSender}
+
 import scala.concurrent.duration._
 import scala.util.Random
 
-object Aggregate {
+@Singleton
+class Aggregate @Inject()(emailSender: EmailSender,
+                          eventService: EventService,
+                          menuViewService: MenuViewService,
+                          userViewService: UserViewService)
+    extends LazyLogging {
 
   private implicit val actorSystem = ActorSystem("MenuAggregate")
   private implicit val executionContext = actorSystem.dispatcher
@@ -30,8 +42,8 @@ object Aggregate {
   private val eventBus = Source
     .queue[Event](5, OverflowStrategy.backpressure)
     .throttle(1, 2 seconds, 3, Shaping)
-    .alsoTo(EventService.storeEvent)
-    .to(MenuViewService.constructView)
+    .alsoTo(eventService.storeEvent)
+    .to(menuViewService.constructView)
     .run()
 
   def createOrUpdateMenu(menu: JsValue) = {
@@ -43,8 +55,8 @@ object Aggregate {
 
   def selectRandomMenu() = {
     for {
-      menuViews <- MenuViewService.findAll()
-      userViews <- UserViewService.findAll()
+      menuViews <- menuViewService.findAll()
+      userViews <- userViewService.findAll()
       randomMenu = if (menuViews.nonEmpty) {
         Random.shuffle(menuViews).head
       } else {
@@ -62,14 +74,11 @@ object Aggregate {
   }
 
   def createOrUpdateMenuViewSchema(version: JsValue) = {
-    eventBus offer Event(
-      `type` = EventType.MENU_SCHEMA_CREATED_OR_UPDATED,
-      data = version
-    )
+    eventBus offer Event(`type` = EventType.MENU_SCHEMA_INIT, data = version)
   }
 
   private def sendEmail(menu: MenuView, users: Seq[UserView]) = {
-    EmailSender.send(
+    emailSender.send(
       "smtp.gmail.com",
       "465",
       "menuselector0501",
@@ -78,10 +87,10 @@ object Aggregate {
       true,
       "menuselector0501@gmail.com",
       "text/html; charset=utf-8",
-      EmailDescription(
-        users.map(user => user.email).toArray,
-        "Today's Menu",
-        s"""
+      Email(
+        emails = users.map(user => user.email).toArray,
+        subject = "Today's Menu",
+        message = s"""
         <html>
           <head>
             <title>Today's Menu</title>
@@ -110,9 +119,6 @@ object Aggregate {
           </body>
         </html>
           """,
-        Array(),
-        Array(),
-        Array()
       )
     )
   }

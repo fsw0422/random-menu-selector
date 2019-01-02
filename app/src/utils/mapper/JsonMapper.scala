@@ -4,7 +4,7 @@ import java.util.UUID
 import akka.http.scaladsl.model.DateTime
 import play.api.libs.json._
 
-object JsMapper {
+object JsonMapper {
 
   implicit val stringSeqWrites = new Writes[Seq[String]] {
 

@@ -8,11 +8,16 @@ import akka.stream.{
 }
 import akka.stream.ThrottleMode.Shaping
 import akka.stream.scaladsl.Source
+import com.typesafe.scalalogging.LazyLogging
+import javax.inject.{Inject, Singleton}
 import play.api.libs.json.JsValue
 import src.{Event, EventService, EventType}
 import scala.concurrent.duration._
 
-object Aggregate {
+@Singleton
+class Aggregate @Inject()(eventService: EventService,
+                          userViewService: UserViewService)
+    extends LazyLogging {
 
   private implicit val actorSystem = ActorSystem("UserAggregate")
   private implicit val executionContext = actorSystem.dispatcher
@@ -31,8 +36,8 @@ object Aggregate {
   private val eventBus = Source
     .queue[Event](5, OverflowStrategy.backpressure)
     .throttle(1, 2 seconds, 3, Shaping)
-    .alsoTo(EventService.storeEvent)
-    .to(UserViewService.constructView)
+    .alsoTo(eventService.storeEvent)
+    .to(userViewService.constructView)
     .run()
 
   def createOrUpdateUser(user: JsValue) = {
@@ -43,9 +48,6 @@ object Aggregate {
   }
 
   def createOrUpdateUserViewSchema(version: JsValue) = {
-    eventBus offer Event(
-      `type` = EventType.USER_SCHEMA_CREATED_OR_UPDATED,
-      data = version
-    )
+    eventBus offer Event(`type` = EventType.USER_SCHEMA_INIT, data = version)
   }
 }

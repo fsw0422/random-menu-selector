@@ -1,53 +1,62 @@
 package src.user
 
-import akka.actor.ActorSystem
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import src.EventType.EventType
-import src.{Event, EventDao, EventType}
+import src.{Event, EventType}
+
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class UserView(id: Option[Long] = None,
                     name: String = "NONE",
                     email: String = "NONE")
 
 object UserView {
-  import src.utils.mapper.JsMapper._
+  import src.utils.mapper.JsonMapper._
 
   implicit val jsonFormat =
     Json.using[Json.WithDefaultValues].format[UserView]
 }
 
-object UserViewService {
+@Singleton
+class UserViewService @Inject()(userViewDao: UserViewDao) extends LazyLogging {
 
   val constructView = Sink.foreach[Event] { event =>
     event.`type` match {
       case EventType.USER_PROFILE_CREATED_OR_UPDATED =>
         val userView = event.data.as[UserView]
-        UserViewDao.upsert(userView)
-      case EventType.USER_SCHEMA_CREATED_OR_UPDATED =>
-        val targetVersion = (event.data \ "version").as[String]
-        UserViewDao.evolve(event.`type`, targetVersion)
+        userViewDao
+          .findByEmail(userView.email)
+          .map { userViews =>
+            val targetUserView = if (userViews.nonEmpty) {
+              userViews.head
+            } else {
+              userView
+            }
+
+            userViewDao.upsert(targetUserView)
+          }
+      case EventType.USER_SCHEMA_INIT =>
+        userViewDao.init()
     }
   }
 
   def findAll() = {
-    UserViewDao.findAll()
+    userViewDao.findAll()
   }
 }
 
-object UserViewDao extends LazyLogging {
+@Singleton
+class UserViewDao {
 
   import slick.jdbc.H2Profile.api._
-
-  private implicit val actorSystem = ActorSystem("UserViewDao")
-  private implicit val executionContext = actorSystem.dispatcher
 
   class UserViewTable(tag: Tag) extends Table[UserView](tag, "USER_VIEW") {
     def id = column[Long]("ID", O.PrimaryKey, O.AutoInc)
     def name = column[String]("NAME")
-    def email = column[String]("EMAIL")
+    def email = column[String]("EMAIL", O.Unique)
 
     def * =
       (id.?, name, email) <> ((UserView.apply _).tupled, UserView.unapply)
@@ -57,28 +66,23 @@ object UserViewDao extends LazyLogging {
 
   private val db = Database.forConfig("h2")
 
+  def init() = {
+    db.run(userViewTable.schema.create)
+  }
+
   def upsert(userView: UserView) = {
     db.run(userViewTable.insertOrUpdate(userView))
   }
 
-  def findAll(): Future[Seq[UserView]] = {
-    db.run(userViewTable.result)
+  def findByEmail(email: String): Future[Seq[UserView]] = {
+    db.run(
+      userViewTable
+        .filter(userView => userView.email === email)
+        .result
+    )
   }
 
-  def evolve(eventType: EventType, targetVersion: String) = {
-    EventDao.findByType(eventType).map { events =>
-      val sameVersionExists = events
-        .exists(event => (event.data \ "version").as[String] == targetVersion)
-      if (!sameVersionExists) {
-        targetVersion match {
-          case "1.0" =>
-            db.run(userViewTable.schema.create)
-          case _ =>
-            logger.warn(s"No version change is defined with $targetVersion")
-        }
-      } else {
-        logger.warn(s"Event with $targetVersion already exists")
-      }
-    }
+  def findAll(): Future[Seq[UserView]] = {
+    db.run(userViewTable.result)
   }
 }

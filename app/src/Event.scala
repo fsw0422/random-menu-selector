@@ -9,6 +9,8 @@ import akka.stream.{
 }
 import akka.stream.ThrottleMode.Shaping
 import akka.stream.scaladsl.{Sink, Source}
+import com.typesafe.scalalogging.LazyLogging
+import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json}
 import src.EventType.EventType
 import src.menu.MenuViewService
@@ -19,8 +21,7 @@ import scala.concurrent.duration._
 object EventType extends Enumeration {
   type EventType = Value
   val UNKNOWN, RANDOM_MENU_ASKED, MENU_PROFILE_CREATED_OR_UPDATED,
-  MENU_SCHEMA_CREATED_OR_UPDATED, USER_PROFILE_CREATED_OR_UPDATED,
-  USER_SCHEMA_CREATED_OR_UPDATED = Value
+  MENU_SCHEMA_INIT, USER_PROFILE_CREATED_OR_UPDATED, USER_SCHEMA_INIT = Value
 }
 
 case class Event(id: Option[Long] = None,
@@ -28,7 +29,11 @@ case class Event(id: Option[Long] = None,
                  `type`: EventType = EventType.UNKNOWN,
                  data: JsValue = Json.parse("{}"))
 
-object EventService {
+@Singleton
+class EventService @Inject()(eventDao: EventDao,
+                             menuViewService: MenuViewService,
+                             userViewService: UserViewService)
+    extends LazyLogging {
 
   private implicit val actorSystem = ActorSystem("Event")
   private implicit val executionContext = actorSystem.dispatcher
@@ -40,7 +45,7 @@ object EventService {
   )
 
   val storeEvent = Sink.foreach[Event] { event =>
-    EventDao.insert(event)
+    eventDao.insert(event)
   }
 
   /*
@@ -49,24 +54,25 @@ object EventService {
   val viewEventBus = Source
     .queue[Event](5, OverflowStrategy.backpressure)
     .throttle(1, 2 seconds, 3, Shaping)
-    .alsoTo(MenuViewService.constructView)
-    .to(UserViewService.constructView)
+    .alsoTo(menuViewService.constructView)
+    .to(userViewService.constructView)
     .run()
 
   /*
    * This method is to replay and construct view
    */
   def replay(from: Long) = {
-    EventDao
+    eventDao
       .findByTimeStamp(DateTime(from))
       .map(events => events.map(event => viewEventBus offer event))
   }
 }
 
-object EventDao {
+@Singleton
+class EventDao {
 
   import slick.jdbc.H2Profile.api._
-  import src.utils.mapper.H2TypeMapper._
+  import src.utils.mapper.ObjectRelationalMapper._
 
   implicit val eventTypeMapper =
     MappedColumnType.base[EventType.Value, String](

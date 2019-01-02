@@ -1,14 +1,13 @@
 package src.menu
 
-import akka.actor.ActorSystem
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.{Inject, Singleton}
 import monocle.macros.GenLens
 import play.api.libs.json._
-import src.EventType.EventType
-import src.{Event, EventDao, EventType}
-
+import src.{Event, EventType}
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class MenuView(id: Option[Long] = None,
                     name: String = "NONE",
@@ -18,46 +17,63 @@ case class MenuView(id: Option[Long] = None,
                     selectedCount: Int = 0)
 
 object MenuView {
-  import src.utils.mapper.JsMapper._
+  import src.utils.mapper.JsonMapper._
 
   implicit val jsonFormatter =
     Json.using[Json.WithDefaultValues].format[MenuView]
 }
 
-object MenuViewService {
+class MenuViewService @Inject()(menuViewDao: MenuViewDao) extends LazyLogging {
 
   val constructView = Sink.foreach[Event] { event =>
     event.`type` match {
       case EventType.RANDOM_MENU_ASKED =>
         val menuView = event.data.as[MenuView]
-        val modifiedMenuView =
-          GenLens[MenuView](_.selectedCount).modify(_ + 1)(menuView)
-        MenuViewDao.upsert(modifiedMenuView)
+        menuViewDao
+          .findByName(menuView.name)
+          .map { menuViews =>
+            val targetMenuView = if (menuViews.nonEmpty) {
+              menuViews.head
+            } else {
+              menuView
+            }
+
+            val modifiedMenuView =
+              GenLens[MenuView](_.selectedCount).modify(_ + 1)(targetMenuView)
+            menuViewDao.upsert(modifiedMenuView)
+          }
       case EventType.MENU_PROFILE_CREATED_OR_UPDATED =>
         val menuView = event.data.as[MenuView]
-        MenuViewDao.upsert(menuView)
-      case EventType.MENU_SCHEMA_CREATED_OR_UPDATED =>
-        val targetVersion = (event.data \ "version").as[String]
-        MenuViewDao.evolve(event.`type`, targetVersion)
+        menuViewDao
+          .findByName(menuView.name)
+          .map { menuViews =>
+            val targetMenuView = if (menuViews.nonEmpty) {
+              menuViews.head
+            } else {
+              menuView
+            }
+
+            menuViewDao.upsert(targetMenuView)
+          }
+      case EventType.MENU_SCHEMA_INIT =>
+        menuViewDao.init()
     }
   }
 
   def findAll(): Future[Seq[MenuView]] = {
-    MenuViewDao.findAll()
+    menuViewDao.findAll()
   }
 }
 
-object MenuViewDao extends LazyLogging {
+@Singleton
+class MenuViewDao {
 
   import slick.jdbc.H2Profile.api._
-  import src.utils.mapper.H2TypeMapper._
-
-  private implicit val actorSystem = ActorSystem("MenuViewDao")
-  private implicit val executionContext = actorSystem.dispatcher
+  import src.utils.mapper.ObjectRelationalMapper._
 
   class MenuViewTable(tag: Tag) extends Table[MenuView](tag, "MENU_VIEW") {
     def id = column[Long]("ID", O.PrimaryKey, O.AutoInc)
-    def name = column[String]("NAME")
+    def name = column[String]("NAME", O.Unique)
     def ingredients = column[Seq[String]]("INGREDIENTS")
     def recipe = column[String]("RECIPE")
     def link = column[String]("LINK")
@@ -71,28 +87,23 @@ object MenuViewDao extends LazyLogging {
 
   private val db = Database.forConfig("h2")
 
+  def init() = {
+    db.run(menuViewTable.schema.create)
+  }
+
   def upsert(menuView: MenuView) = {
     db.run(menuViewTable.insertOrUpdate(menuView))
   }
 
-  def findAll(): Future[Seq[MenuView]] = {
-    db.run(menuViewTable.result)
+  def findByName(name: String): Future[Seq[MenuView]] = {
+    db.run(
+      menuViewTable
+        .filter(menuView => menuView.name === name)
+        .result
+    )
   }
 
-  def evolve(eventType: EventType, targetVersion: String) = {
-    EventDao.findByType(eventType).map { events =>
-      val sameVersionExists = events
-        .exists(event => (event.data \ "version").as[String] == targetVersion)
-      if (!sameVersionExists) {
-        targetVersion match {
-          case "1.0" =>
-            db.run(menuViewTable.schema.create)
-          case _ =>
-            logger.warn(s"No version change is defined with $targetVersion")
-        }
-      } else {
-        logger.warn(s"Event with $targetVersion already exists")
-      }
-    }
+  def findAll(): Future[Seq[MenuView]] = {
+    db.run(menuViewTable.result)
   }
 }

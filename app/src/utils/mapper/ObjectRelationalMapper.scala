@@ -4,7 +4,7 @@ import java.util.UUID
 import akka.http.scaladsl.model.DateTime
 import play.api.libs.json.{JsValue, Json}
 
-object H2TypeMapper {
+object ObjectRelationalMapper {
 
   import slick.jdbc.H2Profile.api._
 
