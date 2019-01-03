@@ -3,10 +3,8 @@ organization := "com.fsw0422"
 
 version := "1.0.0-SNAPSHOT"
 
-scalaVersion := "2.12.6"
+scalaVersion := "2.12.8"
 
-val catsVersion = "1.0.0-RC1"
-val catsEffectVersion = "1.0.0"
 val monocleVersion = "1.4.0"
 
 resolvers += Resolver.jcenterRepo
