@@ -4,8 +4,8 @@ import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
+import src.utils.ViewDatabase
 import src.{Event, EventType}
-
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -21,7 +21,8 @@ object UserView {
 }
 
 @Singleton
-class UserViewService @Inject()(userViewDao: UserViewDao) extends LazyLogging {
+class UserViewService @Inject()(viewDatabase: ViewDatabase,
+                                userViewDao: UserViewDao) {
 
   val constructView = Sink.foreach[Event] { event =>
     event.`type` match {
@@ -38,8 +39,10 @@ class UserViewService @Inject()(userViewDao: UserViewDao) extends LazyLogging {
 
             userViewDao.upsert(targetUserView)
           }
-      case EventType.USER_SCHEMA_INIT =>
-        userViewDao.init()
+      case EventType.USER_SCHEMA_EVOLVED =>
+        viewDatabase.evolveViewSchema(event)(
+          targetVersion => userViewDao.evolve(targetVersion)
+        )
     }
   }
 
@@ -49,7 +52,7 @@ class UserViewService @Inject()(userViewDao: UserViewDao) extends LazyLogging {
 }
 
 @Singleton
-class UserViewDao {
+class UserViewDao extends LazyLogging {
 
   import slick.jdbc.H2Profile.api._
 
@@ -66,10 +69,6 @@ class UserViewDao {
 
   private val db = Database.forConfig("h2")
 
-  def init() = {
-    db.run(userViewTable.schema.create)
-  }
-
   def upsert(userView: UserView) = {
     db.run(userViewTable.insertOrUpdate(userView))
   }
@@ -84,5 +83,20 @@ class UserViewDao {
 
   def findAll(): Future[Seq[UserView]] = {
     db.run(userViewTable.result)
+  }
+
+  def evolve(targetVersion: String) = {
+    targetVersion match {
+      case "1.0" =>
+        db.run(sqlu"""
+          create table USER_VIEW(
+            ID bigint not null auto_increment primary key,
+            NAME varchar not null,
+            EMAIL varchar not null
+          )
+        """)
+      case _ =>
+        logger.error(s"No such versioning defined with $targetVersion")
+    }
   }
 }

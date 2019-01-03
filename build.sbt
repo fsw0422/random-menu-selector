@@ -20,7 +20,7 @@ libraryDependencies ++= Seq(
   "com.github.julien-truffaut" %% "monocle-core" % monocleVersion,
   "com.github.julien-truffaut" %% "monocle-macro" % monocleVersion,
   "com.github.julien-truffaut" %% "monocle-law" % monocleVersion % Test,
-  "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test,
+  "org.scalatest" %% "scalatest" % "3.0.5" % Test,
   "org.mockito" %% "mockito-scala" % "1.0.0-beta.7" % Test
 )
 
@@ -28,3 +28,4 @@ lazy val RandomMenuSelector = (project in file("."))
   .enablePlugins(PlayScala)
 
 fork in run := true
+fork in test := true

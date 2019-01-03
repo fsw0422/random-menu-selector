@@ -40,10 +40,8 @@ class EmailSender {
 
     val to = convertStringEmailsToAddresses(emailDescription.emails)
     m.setRecipients(Message.RecipientType.TO, to)
-
     m.setSubject(emailDescription.subject, encoding)
     m.setSentDate(new Date())
-
     m.setContent(emailDescription.message, encoding)
 
     val transport = if (sslConnection) {
@@ -51,7 +49,6 @@ class EmailSender {
     } else {
       session.getTransport("smtp")
     }
-
     try {
       if (smtpUsername != null && smtpUsername.nonEmpty) {
         transport.connect(smtpUsername, smtpPassword)

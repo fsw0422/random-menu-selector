@@ -21,7 +21,8 @@ import scala.concurrent.duration._
 object EventType extends Enumeration {
   type EventType = Value
   val UNKNOWN, RANDOM_MENU_ASKED, MENU_PROFILE_CREATED_OR_UPDATED,
-  MENU_SCHEMA_INIT, USER_PROFILE_CREATED_OR_UPDATED, USER_SCHEMA_INIT = Value
+  MENU_SCHEMA_EVOLVED, USER_PROFILE_CREATED_OR_UPDATED, USER_SCHEMA_EVOLVED =
+    Value
 }
 
 case class Event(id: Option[Long] = None,
@@ -32,8 +33,7 @@ case class Event(id: Option[Long] = None,
 @Singleton
 class EventService @Inject()(eventDao: EventDao,
                              menuViewService: MenuViewService,
-                             userViewService: UserViewService)
-    extends LazyLogging {
+                             userViewService: UserViewService) {
 
   private implicit val actorSystem = ActorSystem("Event")
   private implicit val executionContext = actorSystem.dispatcher
@@ -69,7 +69,7 @@ class EventService @Inject()(eventDao: EventDao,
 }
 
 @Singleton
-class EventDao {
+class EventDao extends LazyLogging {
 
   import slick.jdbc.H2Profile.api._
   import src.utils.mapper.ObjectRelationalMapper._
@@ -115,5 +115,6 @@ class EventDao {
   }
 
   // Initial creation of Event table
+  // Define event database evolution here
   db.run(eventTable.schema.create)
 }

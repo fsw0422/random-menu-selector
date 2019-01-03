@@ -14,7 +14,6 @@ import play.api.libs.json.JsValue
 import src.user.{UserView, UserViewService}
 import src.{Event, EventService, EventType}
 import src.utils.{Email, EmailSender}
-
 import scala.concurrent.duration._
 import scala.util.Random
 
@@ -22,8 +21,7 @@ import scala.util.Random
 class Aggregate @Inject()(emailSender: EmailSender,
                           eventService: EventService,
                           menuViewService: MenuViewService,
-                          userViewService: UserViewService)
-    extends LazyLogging {
+                          userViewService: UserViewService) {
 
   private implicit val actorSystem = ActorSystem("MenuAggregate")
   private implicit val executionContext = actorSystem.dispatcher
@@ -74,7 +72,7 @@ class Aggregate @Inject()(emailSender: EmailSender,
   }
 
   def createOrUpdateMenuViewSchema(version: JsValue) = {
-    eventBus offer Event(`type` = EventType.MENU_SCHEMA_INIT, data = version)
+    eventBus offer Event(`type` = EventType.MENU_SCHEMA_EVOLVED, data = version)
   }
 
   private def sendEmail(menu: MenuView, users: Seq[UserView]) = {

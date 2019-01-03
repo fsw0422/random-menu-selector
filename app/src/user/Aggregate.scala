@@ -16,8 +16,7 @@ import scala.concurrent.duration._
 
 @Singleton
 class Aggregate @Inject()(eventService: EventService,
-                          userViewService: UserViewService)
-    extends LazyLogging {
+                          userViewService: UserViewService) {
 
   private implicit val actorSystem = ActorSystem("UserAggregate")
   private implicit val executionContext = actorSystem.dispatcher
@@ -48,6 +47,6 @@ class Aggregate @Inject()(eventService: EventService,
   }
 
   def createOrUpdateUserViewSchema(version: JsValue) = {
-    eventBus offer Event(`type` = EventType.USER_SCHEMA_INIT, data = version)
+    eventBus offer Event(`type` = EventType.USER_SCHEMA_EVOLVED, data = version)
   }
 }

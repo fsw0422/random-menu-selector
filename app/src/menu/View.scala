@@ -5,6 +5,7 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import monocle.macros.GenLens
 import play.api.libs.json._
+import src.utils.ViewDatabase
 import src.{Event, EventType}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -23,7 +24,8 @@ object MenuView {
     Json.using[Json.WithDefaultValues].format[MenuView]
 }
 
-class MenuViewService @Inject()(menuViewDao: MenuViewDao) extends LazyLogging {
+class MenuViewService @Inject()(viewDatabase: ViewDatabase,
+                                menuViewDao: MenuViewDao) {
 
   val constructView = Sink.foreach[Event] { event =>
     event.`type` match {
@@ -55,8 +57,10 @@ class MenuViewService @Inject()(menuViewDao: MenuViewDao) extends LazyLogging {
 
             menuViewDao.upsert(targetMenuView)
           }
-      case EventType.MENU_SCHEMA_INIT =>
-        menuViewDao.init()
+      case EventType.MENU_SCHEMA_EVOLVED =>
+        viewDatabase.evolveViewSchema(event)(
+          targetVersion => menuViewDao.evolve(targetVersion)
+        )
     }
   }
 
@@ -66,7 +70,7 @@ class MenuViewService @Inject()(menuViewDao: MenuViewDao) extends LazyLogging {
 }
 
 @Singleton
-class MenuViewDao {
+class MenuViewDao extends LazyLogging {
 
   import slick.jdbc.H2Profile.api._
   import src.utils.mapper.ObjectRelationalMapper._
@@ -87,10 +91,6 @@ class MenuViewDao {
 
   private val db = Database.forConfig("h2")
 
-  def init() = {
-    db.run(menuViewTable.schema.create)
-  }
-
   def upsert(menuView: MenuView) = {
     db.run(menuViewTable.insertOrUpdate(menuView))
   }
@@ -105,5 +105,23 @@ class MenuViewDao {
 
   def findAll(): Future[Seq[MenuView]] = {
     db.run(menuViewTable.result)
+  }
+
+  def evolve(targetVersion: String) = {
+    targetVersion match {
+      case "1.0" =>
+        db.run(sqlu"""
+          create table MENU_VIEW(
+            ID bigint not null auto_increment primary key,
+            NAME varchar not null,
+            INGREDIENTS varchar not null,
+            RECIPE varchar not null,
+            LINK varchar not null,
+            SELECTED_COUNT int not null
+          )
+        """)
+      case _ =>
+        logger.error(s"No such versioning defined with $targetVersion")
+    }
   }
 }
