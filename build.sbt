@@ -1,13 +1,15 @@
-name := "RandomMenuSelector"
+name := "random-menu-selector"
 organization := "com.fsw0422"
 
-version := "1.0.0-SNAPSHOT"
+version := "1.0.1"
 
 scalaVersion := "2.12.8"
 
 val monocleVersion = "1.4.0"
 
 resolvers += Resolver.jcenterRepo
+
+dockerRepository := Some("fsw0422")
 
 libraryDependencies ++= Seq(
   guice,
@@ -24,6 +26,8 @@ libraryDependencies ++= Seq(
 
 lazy val RandomMenuSelector = (project in file("."))
   .enablePlugins(PlayScala)
+  .enablePlugins(DockerPlugin)
+  .enablePlugins(ClasspathJarPlugin)
 
 fork in run := true
 fork in test := true
