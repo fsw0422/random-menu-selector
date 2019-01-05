@@ -1,15 +1,16 @@
+import com.typesafe.sbt.packager.docker.{Cmd, ExecCmd}
 name := "random-menu-selector"
 organization := "com.fsw0422"
 
-version := "1.0.1"
+version := "1.0.0-SNAPSHOT"
 
 scalaVersion := "2.12.8"
-
-val monocleVersion = "1.4.0"
 
 resolvers += Resolver.jcenterRepo
 
 dockerRepository := Some("fsw0422")
+
+val monocleVersion = "1.4.0"
 
 libraryDependencies ++= Seq(
   guice,
