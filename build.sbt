@@ -1,4 +1,3 @@
-import com.typesafe.sbt.packager.docker.{Cmd, ExecCmd}
 name := "random-menu-selector"
 organization := "com.fsw0422"
 
