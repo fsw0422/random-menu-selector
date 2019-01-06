@@ -1,28 +1,42 @@
-name := "RandomMenuSelector"
+import com.typesafe.sbt.packager.docker.{Cmd, ExecCmd}
+name := "random-menu-selector"
 organization := "com.fsw0422"
 
-version := "1.0.0-SNAPSHOT"
+version := "1.0.0"
 
-scalaVersion := "2.12.6"
+scalaVersion := "2.12.8"
 
-val catsVersion = "1.0.0-RC1"
+resolvers += Resolver.jcenterRepo
+
+dockerRepository := Some("fsw0422")
+
+dockerCommands ++= Seq(
+  Cmd("USER", "root"),
+  ExecCmd("RUN", "mkdir", "-p", "/usr/sbin/data"),
+  ExecCmd("RUN", "chown", "-R", "daemon:daemon", "/usr/sbin/data"),
+  ExecCmd("VOLUME", "/usr/sbin/data"),
+  Cmd("USER", "daemon"),
+)
+
 val monocleVersion = "1.4.0"
 
 libraryDependencies ++= Seq(
-  "org.typelevel" %% "cats-core" % catsVersion,
-  "org.typelevel" %% "cats-macros" % catsVersion,
-  "org.typelevel" %% "cats-kernel" % catsVersion,
-  "org.typelevel" %% "cats-free" % catsVersion,
-  "org.typelevel" %% "cats-effect" % "0.5",
-  "org.typelevel" %% "cats-effect-laws" % "0.5" % Test,
-  "org.typelevel" %% "cats-laws" % catsVersion % Test,
-  "org.typelevel" %% "cats-testkit" % catsVersion % Test,
+  guice,
+  "javax.mail" % "mail" % "1.4.7",
+  "com.typesafe.slick" %% "slick" % "3.2.3",
+  "com.h2database" % "h2" % "1.4.197",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
   "com.github.julien-truffaut" %% "monocle-core" % monocleVersion,
   "com.github.julien-truffaut" %% "monocle-macro" % monocleVersion,
   "com.github.julien-truffaut" %% "monocle-law" % monocleVersion % Test,
-  "org.scalatest" %% "scalatest" % "3.0.1" % Test
+  "org.scalatest" %% "scalatest" % "3.0.5" % Test,
+  "org.mockito" %% "mockito-scala" % "1.0.0-beta.7" % Test
 )
-libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
 
-lazy val root = (project in file("."))
+lazy val RandomMenuSelector = (project in file("."))
   .enablePlugins(PlayScala)
+  .enablePlugins(DockerPlugin)
+  .enablePlugins(ClasspathJarPlugin)
+
+fork in run := true
+fork in test := true
