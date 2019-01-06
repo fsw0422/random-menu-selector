@@ -2,7 +2,7 @@ import com.typesafe.sbt.packager.docker.{Cmd, ExecCmd}
 name := "random-menu-selector"
 organization := "com.fsw0422"
 
-version := "1.0.0"
+version := "1.0.1"
 
 scalaVersion := "2.12.8"
 

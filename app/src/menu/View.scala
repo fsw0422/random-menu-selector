@@ -35,14 +35,14 @@ class MenuViewService @Inject()(viewDatabase: ViewDatabase,
           .findByName(menuView.name)
           .map { menuViews =>
             val targetMenuView = if (menuViews.nonEmpty) {
-              menuViews.head
+              val modifiedMenuView =
+                GenLens[MenuView](_.selectedCount).modify(_ + 1)(menuViews.head)
+              modifiedMenuView
             } else {
               menuView
             }
 
-            val modifiedMenuView =
-              GenLens[MenuView](_.selectedCount).modify(_ + 1)(targetMenuView)
-            menuViewDao.upsert(modifiedMenuView)
+            menuViewDao.upsert(targetMenuView)
           }
       case EventType.MENU_PROFILE_CREATED_OR_UPDATED =>
         val menuView = event.data.as[MenuView]
@@ -50,7 +50,18 @@ class MenuViewService @Inject()(viewDatabase: ViewDatabase,
           .findByName(menuView.name)
           .map { menuViews =>
             val targetMenuView = if (menuViews.nonEmpty) {
-              menuViews.head
+              val modifiedMenuView = menuViews.head
+              val lens = GenLens[MenuView]
+              lens(_.name)
+                .modify(name => modifiedMenuView.name)(modifiedMenuView)
+              lens(_.ingredients)
+                .modify(ingredients => modifiedMenuView.ingredients)(
+                  modifiedMenuView
+                )
+              lens(_.recipe)
+                .modify(recipe => modifiedMenuView.recipe)(modifiedMenuView)
+              lens(_.link)
+                .modify(link => modifiedMenuView.link)(modifiedMenuView)
             } else {
               menuView
             }

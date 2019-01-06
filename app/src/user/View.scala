@@ -3,6 +3,7 @@ package src.user
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
+import monocle.macros.GenLens
 import play.api.libs.json.Json
 import src.utils.ViewDatabase
 import src.{Event, EventType}
@@ -32,7 +33,12 @@ class UserViewService @Inject()(viewDatabase: ViewDatabase,
           .findByEmail(userView.email)
           .map { userViews =>
             val targetUserView = if (userViews.nonEmpty) {
-              userViews.head
+              val modifiedUserView = userViews.head
+              val lens = GenLens[UserView]
+              lens(_.name)
+                .modify(name => modifiedUserView.name)(modifiedUserView)
+              lens(_.email)
+                .modify(email => modifiedUserView.email)(modifiedUserView)
             } else {
               userView
             }
