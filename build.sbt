@@ -1,3 +1,4 @@
+import com.typesafe.sbt.packager.docker.{Cmd, ExecCmd}
 name := "random-menu-selector"
 organization := "com.fsw0422"
 
@@ -8,6 +9,14 @@ scalaVersion := "2.12.8"
 resolvers += Resolver.jcenterRepo
 
 dockerRepository := Some("fsw0422")
+
+dockerCommands ++= Seq(
+  Cmd("USER", "root"),
+  ExecCmd("RUN", "mkdir", "-p", "/usr/sbin/data"),
+  ExecCmd("RUN", "chown", "-R", "daemon:daemon", "/usr/sbin/data"),
+  ExecCmd("VOLUME", "/usr/sbin/data"),
+  Cmd("USER", "daemon"),
+)
 
 val monocleVersion = "1.4.0"
 

@@ -8,17 +8,19 @@ import akka.stream.{
   ActorMaterializerSettings,
   OverflowStrategy
 }
-import com.typesafe.scalalogging.LazyLogging
+import com.typesafe.config.Config
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.JsValue
 import src.user.{UserView, UserViewService}
 import src.{Event, EventService, EventType}
 import src.utils.{Email, EmailSender}
+
 import scala.concurrent.duration._
 import scala.util.Random
 
 @Singleton
-class Aggregate @Inject()(emailSender: EmailSender,
+class Aggregate @Inject()(config: Config,
+                          emailSender: EmailSender,
                           eventService: EventService,
                           menuViewService: MenuViewService,
                           userViewService: UserViewService) {
@@ -80,9 +82,7 @@ class Aggregate @Inject()(emailSender: EmailSender,
       "smtp.gmail.com",
       "465",
       "menuselector0501",
-      "!Q2w3e4r5t6y7u",
-      true,
-      true,
+      config.getString("email.password"),
       "menuselector0501@gmail.com",
       "text/html; charset=utf-8",
       Email(
