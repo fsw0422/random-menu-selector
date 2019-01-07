@@ -1,21 +1,21 @@
 package src.menu
 
+import java.util.UUID
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
-import monocle.macros.GenLens
 import play.api.libs.json._
-import src.utils.ViewDatabase
+import src.utils.{Dao, ViewDatabase}
 import src.{Event, EventType}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
-case class MenuView(id: Option[Long] = None,
-                    name: String = "NONE",
-                    ingredients: Seq[String] = Seq(""),
-                    recipe: String = "NONE",
-                    link: String = "NONE",
-                    selectedCount: Int = 0)
+case class MenuView(uuid: UUID,
+                    name: String,
+                    ingredients: Seq[String],
+                    recipe: String,
+                    link: String,
+                    selectedCount: Int)
 
 object MenuView {
   import src.utils.mapper.JsonMapper._
@@ -29,50 +29,19 @@ class MenuViewService @Inject()(viewDatabase: ViewDatabase,
 
   val constructView = Sink.foreach[Event] { event =>
     event.`type` match {
-      case EventType.RANDOM_MENU_ASKED =>
-        val menuView = event.data.as[MenuView]
-        menuViewDao
-          .findByName(menuView.name)
-          .map { menuViews =>
-            val targetMenuView = if (menuViews.nonEmpty) {
-              val modifiedMenuView =
-                GenLens[MenuView](_.selectedCount).modify(_ + 1)(menuViews.head)
-              modifiedMenuView
-            } else {
-              menuView
-            }
-
-            menuViewDao.upsert(targetMenuView)
-          }
-      case EventType.MENU_PROFILE_CREATED_OR_UPDATED =>
-        val menuView = event.data.as[MenuView]
-        menuViewDao
-          .findByName(menuView.name)
-          .map { menuViews =>
-            val targetMenuView = if (menuViews.nonEmpty) {
-              val modifiedMenuView = menuViews.head
-              val lens = GenLens[MenuView]
-              lens(_.name)
-                .modify(name => modifiedMenuView.name)(modifiedMenuView)
-              lens(_.ingredients)
-                .modify(ingredients => modifiedMenuView.ingredients)(
-                  modifiedMenuView
-                )
-              lens(_.recipe)
-                .modify(recipe => modifiedMenuView.recipe)(modifiedMenuView)
-              lens(_.link)
-                .modify(link => modifiedMenuView.link)(modifiedMenuView)
-            } else {
-              menuView
-            }
-
-            menuViewDao.upsert(targetMenuView)
-          }
       case EventType.MENU_SCHEMA_EVOLVED =>
         viewDatabase.evolveViewSchema(event)(
           targetVersion => menuViewDao.evolve(targetVersion)
         )
     }
+  }
+
+  def upsert(menuView: MenuView) = {
+    menuViewDao.upsert(menuView)
+  }
+
+  def findByName(name: String): Future[Seq[MenuView]] = {
+    menuViewDao.findByName(name)
   }
 
   def findAll(): Future[Seq[MenuView]] = {
@@ -81,26 +50,37 @@ class MenuViewService @Inject()(viewDatabase: ViewDatabase,
 }
 
 @Singleton
-class MenuViewDao extends LazyLogging {
+class MenuViewDao extends Dao with LazyLogging {
 
-  import slick.jdbc.H2Profile.api._
-  import src.utils.mapper.ObjectRelationalMapper._
+  import src.utils.mapper.OrmMapper.api._
 
-  class MenuViewTable(tag: Tag) extends Table[MenuView](tag, "MENU_VIEW") {
-    def id = column[Long]("ID", O.PrimaryKey, O.AutoInc)
-    def name = column[String]("NAME", O.Unique)
-    def ingredients = column[Seq[String]]("INGREDIENTS")
-    def recipe = column[String]("RECIPE")
-    def link = column[String]("LINK")
-    def selectedCount = column[Int]("SELECTED_COUNT")
+  val tableColumn = "menu_view"
+  val uuidColumn = "uuid"
+  val nameColumn = "name"
+  val ingredientsColumn = "ingredients"
+  val recipeColumn = "recipe"
+  val linkColumn = "link"
+  val selectedCountColumn = "selected_count"
+
+  class MenuViewTable(tag: Tag) extends Table[MenuView](tag, tableColumn) {
+    def uuid =
+      column[UUID](
+        uuidColumn,
+        O.PrimaryKey,
+        O.AutoInc,
+        O.Default(UUID.randomUUID())
+      )
+    def name = column[String]("name", O.Unique, O.Default("NONE"))
+    def ingredients = column[Seq[String]](ingredientsColumn, O.Default(Seq("")))
+    def recipe = column[String](recipeColumn, O.Default("NONE"))
+    def link = column[String](linkColumn, O.Default("NONE"))
+    def selectedCount = column[Int](selectedCountColumn, O.Default(0))
 
     def * =
-      (id.?, name, ingredients, recipe, link, selectedCount) <> ((MenuView.apply _).tupled, MenuView.unapply)
+      (uuid, name, ingredients, recipe, link, selectedCount) <> ((MenuView.apply _).tupled, MenuView.unapply)
   }
 
   private val menuViewTable = TableQuery[MenuViewTable]
-
-  private val db = Database.forConfig("h2")
 
   def upsert(menuView: MenuView) = {
     db.run(menuViewTable.insertOrUpdate(menuView))
@@ -122,13 +102,13 @@ class MenuViewDao extends LazyLogging {
     targetVersion match {
       case "1.0" =>
         db.run(sqlu"""
-          create table MENU_VIEW(
-            ID bigint not null auto_increment primary key,
-            NAME varchar not null,
-            INGREDIENTS varchar not null,
-            RECIPE varchar not null,
-            LINK varchar not null,
-            SELECTED_COUNT int not null
+          CREATE TABLE $tableColumn(
+            $uuidColumn UUID PRIMARY KEY,
+            $nameColumn TEXT UNIQUE NOT NULL,
+            $ingredientsColumn TEXT[] NOT NULL,
+            $recipeColumn TEXT NOT NULL,
+            $linkColumn TEXT NOT NULL,
+            $selectedCountColumn INTEGER NOT NULL
           )
         """)
       case _ =>

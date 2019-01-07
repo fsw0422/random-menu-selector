@@ -1,18 +1,16 @@
 package src.user
 
+import java.util.UUID
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
-import monocle.macros.GenLens
 import play.api.libs.json.Json
-import src.utils.ViewDatabase
+import src.utils.{Dao, ViewDatabase}
 import src.{Event, EventType}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
-case class UserView(id: Option[Long] = None,
-                    name: String = "NONE",
-                    email: String = "NONE")
+case class UserView(uuid: UUID, name: String, email: String)
 
 object UserView {
   import src.utils.mapper.JsonMapper._
@@ -27,29 +25,19 @@ class UserViewService @Inject()(viewDatabase: ViewDatabase,
 
   val constructView = Sink.foreach[Event] { event =>
     event.`type` match {
-      case EventType.USER_PROFILE_CREATED_OR_UPDATED =>
-        val userView = event.data.as[UserView]
-        userViewDao
-          .findByEmail(userView.email)
-          .map { userViews =>
-            val targetUserView = if (userViews.nonEmpty) {
-              val modifiedUserView = userViews.head
-              val lens = GenLens[UserView]
-              lens(_.name)
-                .modify(name => modifiedUserView.name)(modifiedUserView)
-              lens(_.email)
-                .modify(email => modifiedUserView.email)(modifiedUserView)
-            } else {
-              userView
-            }
-
-            userViewDao.upsert(targetUserView)
-          }
       case EventType.USER_SCHEMA_EVOLVED =>
         viewDatabase.evolveViewSchema(event)(
           targetVersion => userViewDao.evolve(targetVersion)
         )
     }
+  }
+
+  def upsert(userView: UserView) = {
+    userViewDao.upsert(userView)
+  }
+
+  def findByEmail(email: String) = {
+    userViewDao.findByEmail(email)
   }
 
   def findAll() = {
@@ -58,22 +46,26 @@ class UserViewService @Inject()(viewDatabase: ViewDatabase,
 }
 
 @Singleton
-class UserViewDao extends LazyLogging {
+class UserViewDao extends Dao with LazyLogging {
 
-  import slick.jdbc.H2Profile.api._
+  import src.utils.mapper.OrmMapper.api._
 
-  class UserViewTable(tag: Tag) extends Table[UserView](tag, "USER_VIEW") {
-    def id = column[Long]("ID", O.PrimaryKey, O.AutoInc)
-    def name = column[String]("NAME")
-    def email = column[String]("EMAIL", O.Unique)
+  val tableName = "user_view"
+  val uuidName = "uuid"
+  val nameName = "name"
+  val emailName = "email"
+
+  class UserViewTable(tag: Tag) extends Table[UserView](tag, tableName) {
+    def uuid =
+      column[UUID](uuidName, O.PrimaryKey, O.Default(UUID.randomUUID()))
+    def name = column[String](nameName, O.Default("NONE"))
+    def email = column[String](emailName, O.Unique, O.Default("NONE"))
 
     def * =
-      (id.?, name, email) <> ((UserView.apply _).tupled, UserView.unapply)
+      (uuid, name, email) <> ((UserView.apply _).tupled, UserView.unapply)
   }
 
   private val userViewTable = TableQuery[UserViewTable]
-
-  private val db = Database.forConfig("h2")
 
   def upsert(userView: UserView) = {
     db.run(userViewTable.insertOrUpdate(userView))
@@ -95,10 +87,10 @@ class UserViewDao extends LazyLogging {
     targetVersion match {
       case "1.0" =>
         db.run(sqlu"""
-          create table USER_VIEW(
-            ID bigint not null auto_increment primary key,
-            NAME varchar not null,
-            EMAIL varchar not null
+          CREATE TABLE $tableName(
+            $uuidName UUID PRIMARY KEY,
+            $nameName TEXT NOT NULL,
+            $emailName TEXT UNIQUE NOT NULL
           )
         """)
       case _ =>

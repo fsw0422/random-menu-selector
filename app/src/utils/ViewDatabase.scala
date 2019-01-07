@@ -23,12 +23,15 @@ class ViewDatabase @Inject()(eventDao: EventDao) extends LazyLogging {
   def evolveViewSchema(
     event: Event
   )(versioning: String => Any)(implicit executionContext: ExecutionContext) = {
-    val targetVersion = (event.data \ "version").as[String]
+    val targetVersion = (event.data.get \ "version").as[String]
     eventDao
       .findByType(event.`type`)
       .map { events =>
         val targetVersionExists = events
-          .exists(event => targetVersion == (event.data \ "version").as[String])
+          .exists { event =>
+            val eventVersion = (event.data.get \ "version").as[String]
+            targetVersion == eventVersion
+          }
         if (!targetVersionExists) {
           versioning.apply(targetVersion)
         } else {

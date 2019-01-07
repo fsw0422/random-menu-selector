@@ -10,8 +10,8 @@ import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.inject.bind
-import src.EventDao
-import src.user.{UserView, UserViewDao}
+import src.{EventDao, EventService}
+import src.user.{UserView, UserViewDao, UserViewService}
 import src.utils.EmailSender
 
 import scala.concurrent.Future
@@ -23,16 +23,22 @@ class ControllerTest
     with ArgumentMatchersSugar
     with Results {
   private val emailSenderMock = mock[EmailSender]
+  private val eventServiceMock = mock[EventService]
   private val eventDaoMock = mock[EventDao]
-  private val menuDaoMock = mock[MenuViewDao]
-  private val userDaoMock = mock[UserViewDao]
+  private val menuViewServiceMock = mock[MenuViewService]
+  private val menuViewDaoMock = mock[MenuViewDao]
+  private val userViewServiceMock = mock[UserViewService]
+  private val userViewDaoMock = mock[UserViewDao]
 
   private val mockedApp = new GuiceApplicationBuilder()
     .bindings(
       bind[EmailSender].toInstance(emailSenderMock),
-      bind[EventDao].toInstance(eventDaoMock),
-      bind[MenuViewDao].toInstance(menuDaoMock),
-      bind[UserViewDao].toInstance(userDaoMock)
+      //bind[EventService].toInstance(eventServiceMock),
+      //bind[EventDao].toInstance(eventDaoMock),
+      bind[MenuViewService].toInstance(menuViewServiceMock),
+      //bind[MenuViewDao].toInstance(menuViewDaoMock),
+      bind[UserViewService].toInstance(userViewServiceMock),
+      //bind[UserViewDao].toInstance(userViewDaoMock)
     )
     .build
   private implicit val dispatcher = mockedApp.actorSystem.dispatcher
@@ -45,8 +51,15 @@ class ControllerTest
     it(
       "SHOULD return ok status with content indicating that the event has been enqueued"
     ) {
-      when(menuDaoMock.findAll()).thenReturn(Future(Seq(MenuView())))
-      when(userDaoMock.findAll()).thenReturn(Future(Seq(UserView())))
+      //when(eventServiceMock.storeEvent).thenReturn(Future(Seq(any[MenuView])))
+
+      when(menuViewServiceMock.findByName(any[String]))
+        .thenReturn(Future(Seq(any[MenuView])))
+      when(menuViewServiceMock.findAll()).thenReturn(Future(Seq(any[MenuView])))
+
+      when(userViewServiceMock.findByEmail(any[String]))
+        .thenReturn(Future(Seq(any[UserView])))
+      when(userViewServiceMock.findAll()).thenReturn(Future(Seq(any[UserView])))
 
       val Some(response) = route(
         mockedApp,
