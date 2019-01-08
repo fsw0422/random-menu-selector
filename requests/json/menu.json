@@ -1,7 +1,7 @@
 {
-  "name": "test",
-  "ingredients": ["test", "test"],
-  "recipe": "test",
-  "link": "test",
+  "name": "",
+  "ingredients": ["", ""],
+  "recipe": "",
+  "link": "",
   "selectedCount": 1
 }
