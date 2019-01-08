@@ -1,15 +1,16 @@
 package src.menu
 
 import java.util.UUID
+
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
-import src.utils.db.{Dao, ViewDatabase}
 import src.event.{Event, EventType}
+import src.utils.db.{Dao, ViewDatabase}
 
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 case class MenuView(uuid: Option[UUID] = Some(UUID.randomUUID()),
                     name: String,
@@ -19,7 +20,6 @@ case class MenuView(uuid: Option[UUID] = Some(UUID.randomUUID()),
                     selectedCount: Int)
 
 object MenuView {
-  import src.utils.JsonMapper._
 
   implicit val jsonFormatter =
     Json.using[Json.WithDefaultValues].format[MenuView]
@@ -33,6 +33,7 @@ object MenuView {
   val selectedCountColumn = "selected_count"
 }
 
+@Singleton
 class MenuViewService @Inject()(viewDatabase: ViewDatabase,
                                 menuViewDao: MenuViewDao) {
 

@@ -1,22 +1,21 @@
 package src.user
 
 import java.util.UUID
+
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
+import src.event.Event
 import src.utils.db.{Dao, ViewDatabase}
-import src.event.{Event, EventType}
 
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 
 case class UserView(uuid: Option[UUID] = Some(UUID.randomUUID()),
                     name: String,
                     email: String)
 
 object UserView {
-  import src.utils.JsonMapper._
 
   implicit val jsonFormat =
     Json.using[Json.WithDefaultValues].format[UserView]
@@ -32,12 +31,12 @@ class UserViewService @Inject()(viewDatabase: ViewDatabase,
                                 userViewDao: UserViewDao) {
 
   val constructView = Sink.foreach[Event] { event =>
-    event.`type` match {
-      case EventType.USER_SCHEMA_EVOLVED =>
-        viewDatabase.viewVersionNonExistAction(event)(
-          targetVersion => userViewDao.evolve(targetVersion)
-        )
-    }
+    //event.`type` match {
+    //  case EventType.USER_SCHEMA_EVOLVED =>
+    //    viewDatabase.viewVersionNonExistAction(event)(
+    //      targetVersion => userViewDao.evolve(targetVersion)
+    //    )
+    //}
   }
 
   def upsert(userView: UserView) = {

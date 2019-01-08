@@ -1,6 +1,5 @@
 package src.user
 
-import java.util.UUID
 import akka.actor.ActorSystem
 import akka.stream.{
   ActorMaterializer,
