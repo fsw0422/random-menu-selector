@@ -1,10 +1,10 @@
-package src.utils.mapper
+package src.utils.db
 
+import com.github.tminglei.slickpg._
 import slick.basic.Capability
 import slick.jdbc.JdbcCapabilities
-import com.github.tminglei.slickpg._
 
-trait OrmMapper
+trait PostgresProfile
     extends ExPostgresProfile
     with PgArraySupport
     with PgDateSupportJoda
@@ -40,4 +40,10 @@ trait OrmMapper
   }
 }
 
-object OrmMapper extends OrmMapper
+object PostgresProfile extends PostgresProfile with Dao {
+
+  import src.utils.db.PostgresProfile.api._
+
+  // initialization of database
+  db.run(sqlu"""CREATE EXTENSION pgcrypto""")
+}

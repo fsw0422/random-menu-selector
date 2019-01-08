@@ -1,8 +1,9 @@
-package src.utils
+package src.utils.db
 
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
-import src.{Event, EventDao}
+import src.event.{Event, EventDao}
+
 import scala.concurrent.ExecutionContext
 
 /**
@@ -12,17 +13,14 @@ import scala.concurrent.ExecutionContext
 class ViewDatabase @Inject()(eventDao: EventDao) extends LazyLogging {
 
   /**
-    * The view database schema evolves overtime
-    * This function handles the evolution of schema by feeding the versioning definition and incoming version data from event
+    * This function handles the action after checking if the view datavase of the specified version exists
     *
     * @param event The incoming event specifying what version of schema to apply
-    * @param versioning The versioning schema that needs to be fed in
-    *                   Typically table creation, alteration and deletion defined per version definition
-    *                   This will be defined in each View's DAO
+    * @param action The action that needs to be fed
     */
-  def evolveViewSchema(
+  def viewVersionNonExistAction(
     event: Event
-  )(versioning: String => Any)(implicit executionContext: ExecutionContext) = {
+  )(action: String => Any)(implicit executionContext: ExecutionContext) = {
     val targetVersion = (event.data.get \ "version").as[String]
     eventDao
       .findByType(event.`type`)
@@ -33,9 +31,9 @@ class ViewDatabase @Inject()(eventDao: EventDao) extends LazyLogging {
             targetVersion == eventVersion
           }
         if (!targetVersionExists) {
-          versioning.apply(targetVersion)
+          action.apply(targetVersion)
         } else {
-          logger.warn(s"Version $targetVersion already exists")
+          logger.warn(s"View version $targetVersion already exists")
         }
       }
   }

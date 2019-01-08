@@ -10,13 +10,15 @@ resolvers += Resolver.jcenterRepo
 dockerRepository := Some("fsw0422")
 
 val monocleVersion = "1.4.0"
+val slickVersion = "3.2.3"
 val slickPgVersion = "0.17.0"
 
 libraryDependencies ++= Seq(
   guice,
   "javax.mail" % "mail" % "1.4.7",
-  "com.typesafe.slick" %% "slick" % "3.2.3",
-  "org.postgresql" % "postgresql" % "42.2.5",
+  "org.postgresql" % "postgresql" % "42.1.4",
+  "com.typesafe.slick" %% "slick" % slickVersion,
+  "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
   "com.github.tminglei" %% "slick-pg" % slickPgVersion,
   "com.github.tminglei" %% "slick-pg_joda-time" % slickPgVersion,
   "com.github.tminglei" %% "slick-pg_play-json" % slickPgVersion,

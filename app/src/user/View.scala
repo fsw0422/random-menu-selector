@@ -5,18 +5,26 @@ import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import src.utils.{Dao, ViewDatabase}
-import src.{Event, EventType}
+import src.utils.db.{Dao, ViewDatabase}
+import src.event.{Event, EventType}
+
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
-case class UserView(uuid: UUID, name: String, email: String)
+case class UserView(uuid: Option[UUID] = Some(UUID.randomUUID()),
+                    name: String,
+                    email: String)
 
 object UserView {
-  import src.utils.mapper.JsonMapper._
+  import src.utils.JsonMapper._
 
   implicit val jsonFormat =
     Json.using[Json.WithDefaultValues].format[UserView]
+
+  val tableName = "user_view"
+  val uuidName = "uuid"
+  val nameName = "name"
+  val emailName = "email"
 }
 
 @Singleton
@@ -26,7 +34,7 @@ class UserViewService @Inject()(viewDatabase: ViewDatabase,
   val constructView = Sink.foreach[Event] { event =>
     event.`type` match {
       case EventType.USER_SCHEMA_EVOLVED =>
-        viewDatabase.evolveViewSchema(event)(
+        viewDatabase.viewVersionNonExistAction(event)(
           targetVersion => userViewDao.evolve(targetVersion)
         )
     }
@@ -48,21 +56,16 @@ class UserViewService @Inject()(viewDatabase: ViewDatabase,
 @Singleton
 class UserViewDao extends Dao with LazyLogging {
 
-  import src.utils.mapper.OrmMapper.api._
+  import src.utils.db.PostgresProfile.api._
 
-  val tableName = "user_view"
-  val uuidName = "uuid"
-  val nameName = "name"
-  val emailName = "email"
-
-  class UserViewTable(tag: Tag) extends Table[UserView](tag, tableName) {
-    def uuid =
-      column[UUID](uuidName, O.PrimaryKey, O.Default(UUID.randomUUID()))
-    def name = column[String](nameName, O.Default("NONE"))
-    def email = column[String](emailName, O.Unique, O.Default("NONE"))
+  class UserViewTable(tag: Tag)
+      extends Table[UserView](tag, UserView.tableName) {
+    def uuid = column[UUID](UserView.uuidName, O.PrimaryKey)
+    def name = column[String](UserView.nameName)
+    def email = column[String](UserView.emailName)
 
     def * =
-      (uuid, name, email) <> ((UserView.apply _).tupled, UserView.unapply)
+      (uuid.?, name, email) <> ((UserView.apply _).tupled, UserView.unapply)
   }
 
   private val userViewTable = TableQuery[UserViewTable]
@@ -87,10 +90,10 @@ class UserViewDao extends Dao with LazyLogging {
     targetVersion match {
       case "1.0" =>
         db.run(sqlu"""
-          CREATE TABLE $tableName(
-            $uuidName UUID PRIMARY KEY,
-            $nameName TEXT NOT NULL,
-            $emailName TEXT UNIQUE NOT NULL
+          CREATE TABLE #${UserView.tableName}(
+            #${UserView.uuidName} UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            #${UserView.nameName} TEXT DEFAULT '' NOT NULL,
+            #${UserView.emailName} TEXT UNIQUE DEFAULT '' NOT NULL
           )
         """)
       case _ =>

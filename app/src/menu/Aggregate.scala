@@ -15,7 +15,7 @@ import monocle.macros.GenLens
 import org.joda.time.DateTime
 import play.api.libs.json.{JsValue, Json}
 import src.user.{UserView, UserViewService}
-import src.{Event, EventService, EventType}
+import src.event.{Event, EventService, EventType}
 import src.utils.{Email, EmailSender}
 
 import scala.concurrent.duration._
@@ -72,7 +72,6 @@ class Aggregate @Inject()(config: Config,
           targetMenuView
         }
       queueOfferResult <- eventBus offer Event(
-        uuid = UUID.randomUUID(),
         `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
         data = Some(Json.toJson(updatedMenuView)),
         timestamp = DateTime.now
@@ -88,8 +87,7 @@ class Aggregate @Inject()(config: Config,
         Random.shuffle(menuViews).head
       } else {
         MenuView(
-          uuid = UUID.fromString("123e4567-e89b-12d3-a456-426655440000"),
-          "NONE",
+          name = "NONE",
           ingredients = Seq("NONE"),
           recipe = "NONE",
           link = "",
@@ -109,14 +107,13 @@ class Aggregate @Inject()(config: Config,
           randomMenuView
         }
       queueOfferResult <- eventBus offer Event(
-        uuid = UUID.randomUUID(),
         `type` = EventType.RANDOM_MENU_ASKED,
         data = Some(Json.toJson(updatedRandomMenuView)),
         timestamp = DateTime.now
       )
     } yield {
       if (userViews.nonEmpty && menuViews.nonEmpty) {
-        sendEmail(randomMenuView, userViews)
+        //sendEmail(randomMenuView, userViews)
       }
       queueOfferResult
     }
@@ -124,7 +121,6 @@ class Aggregate @Inject()(config: Config,
 
   def createOrUpdateMenuViewSchema(version: JsValue) = {
     eventBus offer Event(
-      uuid = UUID.randomUUID(),
       `type` = EventType.MENU_SCHEMA_EVOLVED,
       data = Some(version),
       timestamp = DateTime.now

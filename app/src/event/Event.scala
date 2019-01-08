@@ -1,22 +1,19 @@
-package src
+package src.event
 
 import java.util.UUID
 import akka.actor.ActorSystem
-import akka.stream.{
-  ActorMaterializer,
-  ActorMaterializerSettings,
-  OverflowStrategy
-}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
 import akka.stream.ThrottleMode.Shaping
 import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime
 import play.api.libs.json.JsValue
-import src.EventType.EventType
+import src.event.EventType.EventType
 import src.menu.MenuViewService
 import src.user.UserViewService
-import src.utils.Dao
+import src.utils.db.{Dao, ViewDatabase}
+
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -27,13 +24,14 @@ object EventType extends Enumeration {
     Value
 }
 
-case class Event(uuid: UUID,
+case class Event(uuid: Option[UUID] = Some(UUID.randomUUID()),
                  timestamp: DateTime,
                  `type`: EventType,
                  data: Option[JsValue])
 
 @Singleton
 class EventService @Inject()(eventDao: EventDao,
+                             viewDatabase: ViewDatabase,
                              menuViewService: MenuViewService,
                              userViewService: UserViewService) {
   private implicit val actorSystem = ActorSystem("Event")
@@ -46,7 +44,14 @@ class EventService @Inject()(eventDao: EventDao,
   )
 
   val storeEvent = Sink.foreach[Event] { event =>
-    eventDao.insert(event)
+    event.`type` match {
+      case EventType.MENU_SCHEMA_EVOLVED | EventType.USER_SCHEMA_EVOLVED =>
+        viewDatabase.viewVersionNonExistAction(event)(
+          targetVersion => eventDao.insert(event)
+        )
+      case _ =>
+        eventDao.insert(event)
+    }
   }
 
   /*
@@ -72,7 +77,7 @@ class EventService @Inject()(eventDao: EventDao,
 @Singleton
 class EventDao extends Dao with LazyLogging {
 
-  import src.utils.mapper.OrmMapper.api._
+  import src.utils.db.PostgresProfile.api._
 
   implicit val eventTypeMapper =
     MappedColumnType.base[EventType.Value, String](
@@ -87,7 +92,7 @@ class EventDao extends Dao with LazyLogging {
     def data = column[JsValue]("data")
 
     def * =
-      (uuid, timestamp, `type`, data.?) <> (Event.tupled, Event.unapply)
+      (uuid.?, timestamp, `type`, data.?) <> (Event.tupled, Event.unapply)
   }
 
   private val eventTable = TableQuery[EventTable]

@@ -13,8 +13,7 @@ import javax.inject.{Inject, Singleton}
 import monocle.macros.GenLens
 import org.joda.time.DateTime
 import play.api.libs.json.{JsValue, Json}
-import src.{Event, EventService, EventType}
-
+import src.event.{Event, EventService, EventType}
 import scala.concurrent.duration._
 
 @Singleton
@@ -48,8 +47,8 @@ class Aggregate @Inject()(eventService: EventService,
       updatedMenuView <- userViewService
         .findByEmail(userView.email)
         .map { userViews =>
+          val lens = GenLens[UserView]
           val targetUserView = if (userViews.nonEmpty) {
-            val lens = GenLens[UserView]
             val nameMod = lens(_.name)
               .modify(name => userView.name)(userViews.head)
             lens(_.email).modify(email => nameMod.email)(nameMod)
@@ -61,7 +60,6 @@ class Aggregate @Inject()(eventService: EventService,
           targetUserView
         }
       queueOfferResult <- eventBus offer Event(
-        uuid = UUID.randomUUID(),
         `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
         data = Some(Json.toJson(updatedMenuView)),
         timestamp = DateTime.now
@@ -71,7 +69,6 @@ class Aggregate @Inject()(eventService: EventService,
 
   def createOrUpdateUserViewSchema(version: JsValue) = {
     eventBus offer Event(
-      uuid = UUID.randomUUID(),
       `type` = EventType.USER_SCHEMA_EVOLVED,
       data = Some(version),
       timestamp = DateTime.now

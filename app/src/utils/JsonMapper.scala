@@ -1,26 +1,11 @@
-package src.utils.mapper
+package src.utils
+
 import java.util.UUID
 
 import akka.http.scaladsl.model.DateTime
 import play.api.libs.json._
 
 object JsonMapper {
-
-  implicit val stringSeqWrites = new Writes[Seq[String]] {
-
-    override def writes(stringSeq: Seq[String]): JsValue =
-      JsString(stringSeq.mkString(","))
-  }
-
-  implicit val stringSeqReads = new Reads[Seq[String]] {
-
-    override def reads(json: JsValue): JsResult[Seq[String]] = json match {
-      case JsString(stringSeq) =>
-        JsSuccess(stringSeq.split(",").map(_.trim).toSeq)
-      case _ =>
-        JsError(JsPath(), JsonValidationError("Error parsing Seq[String]"))
-    }
-  }
 
   implicit val dateTimeWrites = new Writes[DateTime] {
 
