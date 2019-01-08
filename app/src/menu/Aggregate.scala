@@ -1,21 +1,16 @@
 package src.menu
 
-import java.util.UUID
 import akka.actor.ActorSystem
 import akka.stream.ThrottleMode.Shaping
 import akka.stream.scaladsl.Source
-import akka.stream.{
-  ActorMaterializer,
-  ActorMaterializerSettings,
-  OverflowStrategy
-}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
 import com.typesafe.config.Config
 import javax.inject.{Inject, Singleton}
 import monocle.macros.GenLens
 import org.joda.time.DateTime
 import play.api.libs.json.{JsValue, Json}
-import src.user.{UserView, UserViewService}
 import src.event.{Event, EventService, EventType}
+import src.user.{UserView, UserViewService}
 import src.utils.{Email, EmailSender}
 
 import scala.concurrent.duration._
@@ -113,7 +108,7 @@ class Aggregate @Inject()(config: Config,
       )
     } yield {
       if (userViews.nonEmpty && menuViews.nonEmpty) {
-        //sendEmail(randomMenuView, userViews)
+        sendEmail(randomMenuView, userViews)
       }
       queueOfferResult
     }
