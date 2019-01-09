@@ -32,6 +32,8 @@ class UserViewService @Inject()(viewDatabase: ViewDatabase,
                                 userViewDao: UserViewDao) {
   val constructView = Sink.foreach[Event] { event =>
     event.`type` match {
+      case EventType.USER_PROFILE_CREATED_OR_UPDATED =>
+        userViewDao.upsert(event.data.get.as[UserView])
       case EventType.USER_SCHEMA_EVOLVED =>
         viewDatabase.viewVersionNonExistAction(event)(
           targetVersion => userViewDao.evolve(targetVersion)

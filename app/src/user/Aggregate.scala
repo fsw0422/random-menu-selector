@@ -50,8 +50,6 @@ class Aggregate @Inject()(eventService: EventService,
           } else {
             userView
           }
-
-          userViewService.upsert(targetUserView)
           targetUserView
         }
       queueOfferResult <- eventBus offer Event(
