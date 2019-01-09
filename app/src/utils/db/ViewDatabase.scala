@@ -25,12 +25,12 @@ class ViewDatabase @Inject()(eventDao: EventDao) extends LazyLogging {
     eventDao
       .findByType(event.`type`)
       .map { events =>
-        val targetVersionExists = events
-          .exists { event =>
+        val targetVersionCount = events
+          .count { event =>
             val eventVersion = (event.data.get \ "version").as[String]
             targetVersion == eventVersion
           }
-        if (!targetVersionExists) {
+        if (targetVersionCount == 1) {
           action.apply(targetVersion)
         } else {
           logger.warn(s"View version $targetVersion already exists")
