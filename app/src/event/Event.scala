@@ -65,8 +65,6 @@ class EventService @Inject()(eventDao: EventDao,
       case EventType.USER_PROFILE_CREATED_OR_UPDATED |
           EventType.USER_SCHEMA_EVOLVED =>
         userViewEventBus offer event
-      case _ =>
-        logger.error(s"Action of Event type ${event.`type`} does not exist")
     }
     eventDao.insert(event)
   }
