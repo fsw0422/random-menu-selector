@@ -1,7 +1,7 @@
 name := "random-menu-selector"
 organization := "com.fsw0422"
 
-version := "1.0.2"
+version := "latest"
 
 scalaVersion := "2.12.8"
 
