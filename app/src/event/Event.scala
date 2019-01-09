@@ -2,8 +2,11 @@ package src.event
 
 import java.util.UUID
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
-import akka.stream.ThrottleMode.Shaping
+import akka.stream.{
+  ActorMaterializer,
+  ActorMaterializerSettings,
+  OverflowStrategy
+}
 import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
@@ -15,7 +18,6 @@ import src.user.UserViewService
 import src.utils.db.{Dao, ViewDatabase}
 
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 object EventType extends Enumeration {
   type EventType = Value
@@ -33,7 +35,8 @@ case class Event(uuid: Option[UUID] = Some(UUID.randomUUID()),
 class EventService @Inject()(eventDao: EventDao,
                              viewDatabase: ViewDatabase,
                              menuViewService: MenuViewService,
-                             userViewService: UserViewService) {
+                             userViewService: UserViewService)
+    extends LazyLogging {
   private implicit val actorSystem = ActorSystem("Event")
   private implicit val executionContext = actorSystem.dispatcher
   private implicit val actorMaterializerSettings = ActorMaterializerSettings(
@@ -43,34 +46,29 @@ class EventService @Inject()(eventDao: EventDao,
     actorMaterializerSettings
   )
 
-  val storeEvent = Sink.foreach[Event] { event =>
-    event.`type` match {
-      case EventType.MENU_SCHEMA_EVOLVED | EventType.USER_SCHEMA_EVOLVED =>
-        viewDatabase.viewVersionNonExistAction(event)(
-          targetVersion => eventDao.insert(event)
-        )
-      case _ =>
-        eventDao.insert(event)
-    }
-  }
-
-  /*
-   * This method is to replay and construct view
-   */
-  val viewEventBus = Source
+  val menuViewEventBus = Source
     .queue[Event](5, OverflowStrategy.backpressure)
-    .throttle(1, 2 seconds, 3, Shaping)
-    .alsoTo(menuViewService.constructView)
+    .to(menuViewService.constructView)
+    .run()
+
+  val userViewEventBus = Source
+    .queue[Event](5, OverflowStrategy.backpressure)
     .to(userViewService.constructView)
     .run()
 
-  /*
-   * This method is to replay and construct view
-   */
-  def replay(from: Long) = {
-    eventDao
-      .findByTimeStamp(new DateTime(from))
-      .map(events => events.map(event => viewEventBus offer event))
+  val eventHandler = Sink.foreach[Event] { event =>
+    event.`type` match {
+      case EventType.RANDOM_MENU_ASKED |
+          EventType.MENU_PROFILE_CREATED_OR_UPDATED |
+          EventType.MENU_SCHEMA_EVOLVED =>
+        menuViewEventBus offer event
+      case EventType.USER_PROFILE_CREATED_OR_UPDATED |
+          EventType.USER_SCHEMA_EVOLVED =>
+        userViewEventBus offer event
+      case _ =>
+        logger.error(s"Action of Event type ${event.`type`} does not exist")
+    }
+    eventDao.insert(event)
   }
 }
 

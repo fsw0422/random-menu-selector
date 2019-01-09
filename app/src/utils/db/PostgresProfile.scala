@@ -24,7 +24,7 @@ trait PostgresProfile
   override val api = CustomMapperApi
 
   object CustomMapperApi
-    extends API
+      extends API
       with ArrayImplicits
       with JodaDateTimeImplicits
       with RangeImplicits
@@ -44,6 +44,6 @@ object PostgresProfile extends PostgresProfile with Dao {
 
   import src.utils.db.PostgresProfile.api._
 
-  // initialization of database
+  // init database
   db.run(sqlu"""CREATE EXTENSION pgcrypto""")
 }

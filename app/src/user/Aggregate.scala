@@ -6,14 +6,12 @@ import akka.stream.{
   ActorMaterializerSettings,
   OverflowStrategy
 }
-import akka.stream.ThrottleMode.Shaping
 import akka.stream.scaladsl.Source
 import javax.inject.{Inject, Singleton}
 import monocle.macros.GenLens
 import org.joda.time.DateTime
 import play.api.libs.json.{JsValue, Json}
 import src.event.{Event, EventService, EventType}
-import scala.concurrent.duration._
 
 @Singleton
 class Aggregate @Inject()(eventService: EventService,
@@ -35,9 +33,7 @@ class Aggregate @Inject()(eventService: EventService,
    */
   private val eventBus = Source
     .queue[Event](5, OverflowStrategy.backpressure)
-    .throttle(1, 2 seconds, 3, Shaping)
-    .alsoTo(eventService.storeEvent)
-    .to(userViewService.constructView)
+    .to(eventService.eventHandler)
     .run()
 
   def createOrUpdateUser(user: JsValue) = {

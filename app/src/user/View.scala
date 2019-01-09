@@ -6,9 +6,10 @@ import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import src.event.Event
+import src.event.{Event, EventType}
 import src.utils.db.{Dao, ViewDatabase}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 case class UserView(uuid: Option[UUID] = Some(UUID.randomUUID()),
@@ -29,14 +30,13 @@ object UserView {
 @Singleton
 class UserViewService @Inject()(viewDatabase: ViewDatabase,
                                 userViewDao: UserViewDao) {
-
   val constructView = Sink.foreach[Event] { event =>
-    //event.`type` match {
-    //  case EventType.USER_SCHEMA_EVOLVED =>
-    //    viewDatabase.viewVersionNonExistAction(event)(
-    //      targetVersion => userViewDao.evolve(targetVersion)
-    //    )
-    //}
+    event.`type` match {
+      case EventType.USER_SCHEMA_EVOLVED =>
+        viewDatabase.viewVersionNonExistAction(event)(
+          targetVersion => userViewDao.evolve(targetVersion)
+        )
+    }
   }
 
   def upsert(userView: UserView) = {

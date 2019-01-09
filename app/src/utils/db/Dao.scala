@@ -4,7 +4,7 @@ import slick.basic.DatabaseConfig
 import slick.jdbc.JdbcProfile
 
 trait Dao {
-  protected val dbConfig = DatabaseConfig.forConfig[JdbcProfile]("postgres")
+  val dbConfig = DatabaseConfig.forConfig[JdbcProfile]("postgres")
 
-  protected val db = dbConfig.db
+  val db = dbConfig.db
 }

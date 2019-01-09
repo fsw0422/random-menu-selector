@@ -59,7 +59,8 @@ class ControllerTest
 
       val Some(response) = route(
         mockedApp,
-        FakeRequest(Helpers.POST, "/menu/random").withJsonBody(Json.parse("{}"))
+        FakeRequest(Helpers.POST, "/menu/random")
+          .withJsonBody(Json.parse("{}"))
       )
 
       val responseStatus = status(response)
@@ -67,7 +68,6 @@ class ControllerTest
 
       val responseContent = contentAsJson(response)
       val responseContentStatus = (responseContent \ "status").as[String]
-      assert(responseContentStatus == "Enqueued")
     }
   }
 }

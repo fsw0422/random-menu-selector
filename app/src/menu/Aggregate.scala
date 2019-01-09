@@ -1,9 +1,12 @@
 package src.menu
 
 import akka.actor.ActorSystem
-import akka.stream.ThrottleMode.Shaping
 import akka.stream.scaladsl.Source
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
+import akka.stream.{
+  ActorMaterializer,
+  ActorMaterializerSettings,
+  OverflowStrategy
+}
 import com.typesafe.config.Config
 import javax.inject.{Inject, Singleton}
 import monocle.macros.GenLens
@@ -33,15 +36,11 @@ class Aggregate @Inject()(config: Config,
   )
 
   /*
-   * Event.scala bus stream that acts as a broker between aggregate and
-   * - Event.scala Store which stores the events
-   * - View component that constructs / persists view models
+   * Event bus stream that connects Aggregate and the Event storage
    */
   private val eventBus = Source
     .queue[Event](5, OverflowStrategy.backpressure)
-    .throttle(1, 2 seconds, 3, Shaping)
-    .alsoTo(eventService.storeEvent)
-    .to(menuViewService.constructView)
+    .to(eventService.eventHandler)
     .run()
 
   def createOrUpdateMenu(menu: JsValue) = {
@@ -50,7 +49,7 @@ class Aggregate @Inject()(config: Config,
       updatedMenuView <- menuViewService
         .findByName(menuView.name)
         .map { menuViews =>
-          val targetMenuView = if (menuViews.nonEmpty) {
+          if (menuViews.nonEmpty) {
             val lens = GenLens[MenuView]
             val nameMod = lens(_.name)
               .modify(name => menuViews.head.name)(menuViews.head)
@@ -62,9 +61,6 @@ class Aggregate @Inject()(config: Config,
           } else {
             menuView
           }
-
-          menuViewService.upsert(targetMenuView)
-          targetMenuView
         }
       queueOfferResult <- eventBus offer Event(
         `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
@@ -92,14 +88,11 @@ class Aggregate @Inject()(config: Config,
       updatedRandomMenuView <- menuViewService
         .findByName(randomMenuView.name)
         .map { menuViews =>
-          val targetMenuView = if (menuViews.nonEmpty) {
+          if (menuViews.nonEmpty) {
             GenLens[MenuView](_.selectedCount).modify(_ + 1)(menuViews.head)
           } else {
             randomMenuView
           }
-
-          menuViewService.upsert(targetMenuView)
-          randomMenuView
         }
       queueOfferResult <- eventBus offer Event(
         `type` = EventType.RANDOM_MENU_ASKED,
