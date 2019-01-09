@@ -62,11 +62,14 @@ class EventService @Inject()(eventDao: EventDao,
           EventType.MENU_PROFILE_CREATED_OR_UPDATED |
           EventType.MENU_SCHEMA_EVOLVED =>
         menuViewEventBus offer event
+        eventDao.insert(event)
       case EventType.USER_PROFILE_CREATED_OR_UPDATED |
           EventType.USER_SCHEMA_EVOLVED =>
         userViewEventBus offer event
+        eventDao.insert(event)
+      case _ =>
+        logger.error(s"No such event type [${event.`type`}]")
     }
-    eventDao.insert(event)
   }
 }
 

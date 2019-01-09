@@ -47,6 +47,8 @@ class MenuViewService @Inject()(viewDatabase: ViewDatabase,
         viewDatabase.viewVersionNonExistAction(event)(
           targetVersion => menuViewDao.evolve(targetVersion)
         )
+      case _ =>
+        logger.error(s"No such event type [${event.`type`}]")
     }
   }
 
@@ -102,7 +104,7 @@ class MenuViewDao extends Dao with LazyLogging {
   def evolve(targetVersion: String) = {
     targetVersion match {
       case "1.0" =>
-        val q = sqlu"""
+        db.run(sqlu"""
           CREATE TABLE #${MenuView.tableColumn}(
             #${MenuView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             #${MenuView.nameColumn} TEXT UNIQUE NOT NULL DEFAULT '',
@@ -111,8 +113,7 @@ class MenuViewDao extends Dao with LazyLogging {
             #${MenuView.linkColumn} TEXT NOT NULL DEFAULT '',
             #${MenuView.selectedCountColumn} INTEGER NOT NULL DEFAULT 0
           )
-        """
-        db.run(q)
+        """)
       case _ =>
         logger.error(s"No such versioning defined with $targetVersion")
     }
