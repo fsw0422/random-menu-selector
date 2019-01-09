@@ -1,12 +1,7 @@
 package src.menu
 
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.Source
-import akka.stream.{
-  ActorMaterializer,
-  ActorMaterializerSettings,
-  OverflowStrategy
-}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import com.typesafe.config.Config
 import javax.inject.{Inject, Singleton}
 import monocle.macros.GenLens
@@ -15,8 +10,6 @@ import play.api.libs.json.{JsValue, Json}
 import src.event.{Event, EventService, EventType}
 import src.user.{UserView, UserViewService}
 import src.utils.{Email, EmailSender}
-
-import scala.concurrent.duration._
 import scala.util.Random
 
 @Singleton
@@ -34,14 +27,6 @@ class Aggregate @Inject()(config: Config,
   private implicit val actorMaterializer = ActorMaterializer(
     actorMaterializerSettings
   )
-
-  /*
-   * Event bus stream that connects Aggregate and the Event storage
-   */
-  private val eventBus = Source
-    .queue[Event](5, OverflowStrategy.backpressure)
-    .to(eventService.eventHandler)
-    .run()
 
   def createOrUpdateMenu(menu: JsValue) = {
     val menuView = menu.as[MenuView]
@@ -62,7 +47,7 @@ class Aggregate @Inject()(config: Config,
             menuView
           }
         }
-      queueOfferResult <- eventBus offer Event(
+      queueOfferResult <- eventService.menuEventBus offer Event(
         `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
         data = Some(Json.toJson(updatedMenuView)),
         timestamp = DateTime.now
@@ -94,7 +79,7 @@ class Aggregate @Inject()(config: Config,
             randomMenuView
           }
         }
-      queueOfferResult <- eventBus offer Event(
+      queueOfferResult <- eventService.menuEventBus offer Event(
         `type` = EventType.RANDOM_MENU_ASKED,
         data = Some(Json.toJson(updatedRandomMenuView)),
         timestamp = DateTime.now
@@ -108,7 +93,7 @@ class Aggregate @Inject()(config: Config,
   }
 
   def createOrUpdateMenuViewSchema(version: JsValue) = {
-    eventBus offer Event(
+    eventService.menuEventBus offer Event(
       `type` = EventType.MENU_SCHEMA_EVOLVED,
       data = Some(version),
       timestamp = DateTime.now

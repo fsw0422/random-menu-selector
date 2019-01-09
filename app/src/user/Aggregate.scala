@@ -1,12 +1,7 @@
 package src.user
 
 import akka.actor.ActorSystem
-import akka.stream.{
-  ActorMaterializer,
-  ActorMaterializerSettings,
-  OverflowStrategy
-}
-import akka.stream.scaladsl.Source
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import javax.inject.{Inject, Singleton}
 import monocle.macros.GenLens
 import org.joda.time.DateTime
@@ -26,16 +21,6 @@ class Aggregate @Inject()(eventService: EventService,
     actorMaterializerSettings
   )
 
-  /*
-   * Event.scala bus stream that acts as a broker between aggregate and
-   * - Event.scala Store which stores the events
-   * - View component that constructs / persists view models
-   */
-  private val eventBus = Source
-    .queue[Event](5, OverflowStrategy.backpressure)
-    .to(eventService.eventHandler)
-    .run()
-
   def createOrUpdateUser(user: JsValue) = {
     val userView = user.as[UserView]
     for {
@@ -52,7 +37,7 @@ class Aggregate @Inject()(eventService: EventService,
           }
           targetUserView
         }
-      queueOfferResult <- eventBus offer Event(
+      queueOfferResult <- eventService.userEventBus offer Event(
         `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
         data = Some(Json.toJson(updatedMenuView)),
         timestamp = DateTime.now
@@ -61,7 +46,7 @@ class Aggregate @Inject()(eventService: EventService,
   }
 
   def createOrUpdateUserViewSchema(version: JsValue) = {
-    eventBus offer Event(
+    eventService.userEventBus offer Event(
       `type` = EventType.USER_SCHEMA_EVOLVED,
       data = Some(version),
       timestamp = DateTime.now
