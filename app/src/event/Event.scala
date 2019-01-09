@@ -7,7 +7,7 @@ import akka.stream.{
   ActorMaterializerSettings,
   OverflowStrategy
 }
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{Flow, Source}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime
@@ -37,6 +37,7 @@ class EventService @Inject()(eventDao: EventDao,
                              menuViewService: MenuViewService,
                              userViewService: UserViewService)
     extends LazyLogging {
+
   private implicit val actorSystem = ActorSystem("Event")
   private implicit val executionContext = actorSystem.dispatcher
   private implicit val actorMaterializerSettings = ActorMaterializerSettings(
@@ -46,31 +47,42 @@ class EventService @Inject()(eventDao: EventDao,
     actorMaterializerSettings
   )
 
-  val menuViewEventBus = Source
-    .queue[Event](5, OverflowStrategy.backpressure)
-    .to(menuViewService.constructView)
-    .run()
+  val menuEventBus =
+    Source
+      .queue[Event](5, OverflowStrategy.backpressure)
+      .via {
+        Flow[Event].map { event =>
+          event.`type` match {
+            case EventType.RANDOM_MENU_ASKED |
+                EventType.MENU_PROFILE_CREATED_OR_UPDATED |
+                EventType.MENU_SCHEMA_EVOLVED =>
+              eventDao.insert(event)
+            case _ =>
+              logger.error(s"No such event type [${event.`type`}]")
+          }
+          event
+        }
+      }
+      .to(menuViewService.constructView)
+      .run()
 
-  val userViewEventBus = Source
-    .queue[Event](5, OverflowStrategy.backpressure)
-    .to(userViewService.constructView)
-    .run()
-
-  val eventHandler = Sink.foreach[Event] { event =>
-    event.`type` match {
-      case EventType.RANDOM_MENU_ASKED |
-          EventType.MENU_PROFILE_CREATED_OR_UPDATED |
-          EventType.MENU_SCHEMA_EVOLVED =>
-        menuViewEventBus offer event
-        eventDao.insert(event)
-      case EventType.USER_PROFILE_CREATED_OR_UPDATED |
-          EventType.USER_SCHEMA_EVOLVED =>
-        userViewEventBus offer event
-        eventDao.insert(event)
-      case _ =>
-        logger.error(s"No such event type [${event.`type`}]")
-    }
-  }
+  val userEventBus =
+    Source
+      .queue[Event](5, OverflowStrategy.backpressure)
+      .via {
+        Flow[Event].map { event =>
+          event.`type` match {
+            case EventType.USER_PROFILE_CREATED_OR_UPDATED |
+                EventType.USER_SCHEMA_EVOLVED =>
+              eventDao.insert(event)
+            case _ =>
+              logger.error(s"No such event type [${event.`type`}]")
+          }
+          event
+        }
+      }
+      .to(userViewService.constructView)
+      .run()
 }
 
 @Singleton
