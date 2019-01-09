@@ -1,78 +1,61 @@
 package src.menu
 
+import java.util.UUID
+
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
-import monocle.macros.GenLens
 import play.api.libs.json._
-import src.utils.ViewDatabase
-import src.{Event, EventType}
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
+import src.event.{Event, EventType}
+import src.utils.db.{Dao, ViewDatabase}
 
-case class MenuView(id: Option[Long] = None,
-                    name: String = "NONE",
-                    ingredients: Seq[String] = Seq(""),
-                    recipe: String = "NONE",
-                    link: String = "NONE",
-                    selectedCount: Int = 0)
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+case class MenuView(uuid: Option[UUID] = Some(UUID.randomUUID()),
+                    name: String,
+                    ingredients: Seq[String],
+                    recipe: String,
+                    link: String,
+                    selectedCount: Int)
 
 object MenuView {
-  import src.utils.mapper.JsonMapper._
 
   implicit val jsonFormatter =
     Json.using[Json.WithDefaultValues].format[MenuView]
+
+  val tableColumn = "menu_view"
+  val uuidColumn = "uuid"
+  val nameColumn = "name"
+  val ingredientsColumn = "ingredients"
+  val recipeColumn = "recipe"
+  val linkColumn = "link"
+  val selectedCountColumn = "selected_count"
 }
 
+@Singleton
 class MenuViewService @Inject()(viewDatabase: ViewDatabase,
-                                menuViewDao: MenuViewDao) {
+                                menuViewDao: MenuViewDao)
+    extends LazyLogging {
 
   val constructView = Sink.foreach[Event] { event =>
     event.`type` match {
-      case EventType.RANDOM_MENU_ASKED =>
-        val menuView = event.data.as[MenuView]
-        menuViewDao
-          .findByName(menuView.name)
-          .map { menuViews =>
-            val targetMenuView = if (menuViews.nonEmpty) {
-              val modifiedMenuView =
-                GenLens[MenuView](_.selectedCount).modify(_ + 1)(menuViews.head)
-              modifiedMenuView
-            } else {
-              menuView
-            }
-
-            menuViewDao.upsert(targetMenuView)
-          }
-      case EventType.MENU_PROFILE_CREATED_OR_UPDATED =>
-        val menuView = event.data.as[MenuView]
-        menuViewDao
-          .findByName(menuView.name)
-          .map { menuViews =>
-            val targetMenuView = if (menuViews.nonEmpty) {
-              val modifiedMenuView = menuViews.head
-              val lens = GenLens[MenuView]
-              lens(_.name)
-                .modify(name => modifiedMenuView.name)(modifiedMenuView)
-              lens(_.ingredients)
-                .modify(ingredients => modifiedMenuView.ingredients)(
-                  modifiedMenuView
-                )
-              lens(_.recipe)
-                .modify(recipe => modifiedMenuView.recipe)(modifiedMenuView)
-              lens(_.link)
-                .modify(link => modifiedMenuView.link)(modifiedMenuView)
-            } else {
-              menuView
-            }
-
-            menuViewDao.upsert(targetMenuView)
-          }
+      case EventType.RANDOM_MENU_ASKED |
+          EventType.MENU_PROFILE_CREATED_OR_UPDATED =>
+        menuViewDao.upsert(event.data.get.as[MenuView])
       case EventType.MENU_SCHEMA_EVOLVED =>
-        viewDatabase.evolveViewSchema(event)(
+        viewDatabase.viewVersionNonExistAction(event)(
           targetVersion => menuViewDao.evolve(targetVersion)
         )
     }
+  }
+
+  def upsert(menuView: MenuView) = {
+    menuViewDao.upsert(menuView)
+  }
+
+  def findByName(name: String): Future[Seq[MenuView]] = {
+    menuViewDao.findByName(name)
   }
 
   def findAll(): Future[Seq[MenuView]] = {
@@ -81,26 +64,24 @@ class MenuViewService @Inject()(viewDatabase: ViewDatabase,
 }
 
 @Singleton
-class MenuViewDao extends LazyLogging {
+class MenuViewDao extends Dao with LazyLogging {
 
-  import slick.jdbc.H2Profile.api._
-  import src.utils.mapper.ObjectRelationalMapper._
+  import src.utils.db.PostgresProfile.api._
 
-  class MenuViewTable(tag: Tag) extends Table[MenuView](tag, "MENU_VIEW") {
-    def id = column[Long]("ID", O.PrimaryKey, O.AutoInc)
-    def name = column[String]("NAME", O.Unique)
-    def ingredients = column[Seq[String]]("INGREDIENTS")
-    def recipe = column[String]("RECIPE")
-    def link = column[String]("LINK")
-    def selectedCount = column[Int]("SELECTED_COUNT")
+  class MenuViewTable(tag: Tag)
+      extends Table[MenuView](tag, MenuView.tableColumn) {
+    def uuid = column[UUID](MenuView.uuidColumn, O.PrimaryKey)
+    def name = column[String](MenuView.nameColumn)
+    def ingredients = column[Seq[String]](MenuView.ingredientsColumn)
+    def recipe = column[String](MenuView.recipeColumn)
+    def link = column[String](MenuView.linkColumn)
+    def selectedCount = column[Int](MenuView.selectedCountColumn)
 
     def * =
-      (id.?, name, ingredients, recipe, link, selectedCount) <> ((MenuView.apply _).tupled, MenuView.unapply)
+      (uuid.?, name, ingredients, recipe, link, selectedCount) <> ((MenuView.apply _).tupled, MenuView.unapply)
   }
 
   private val menuViewTable = TableQuery[MenuViewTable]
-
-  private val db = Database.forConfig("h2")
 
   def upsert(menuView: MenuView) = {
     db.run(menuViewTable.insertOrUpdate(menuView))
@@ -121,16 +102,17 @@ class MenuViewDao extends LazyLogging {
   def evolve(targetVersion: String) = {
     targetVersion match {
       case "1.0" =>
-        db.run(sqlu"""
-          create table MENU_VIEW(
-            ID bigint not null auto_increment primary key,
-            NAME varchar not null,
-            INGREDIENTS varchar not null,
-            RECIPE varchar not null,
-            LINK varchar not null,
-            SELECTED_COUNT int not null
+        val q = sqlu"""
+          CREATE TABLE #${MenuView.tableColumn}(
+            #${MenuView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            #${MenuView.nameColumn} TEXT UNIQUE NOT NULL DEFAULT '',
+            #${MenuView.ingredientsColumn} TEXT[] NOT NULL DEFAULT '{}',
+            #${MenuView.recipeColumn} TEXT NOT NULL DEFAULT '',
+            #${MenuView.linkColumn} TEXT NOT NULL DEFAULT '',
+            #${MenuView.selectedCountColumn} INTEGER NOT NULL DEFAULT 0
           )
-        """)
+        """
+        db.run(q)
       case _ =>
         logger.error(s"No such versioning defined with $targetVersion")
     }

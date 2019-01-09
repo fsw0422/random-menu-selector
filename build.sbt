@@ -1,4 +1,3 @@
-import com.typesafe.sbt.packager.docker.{Cmd, ExecCmd}
 name := "random-menu-selector"
 organization := "com.fsw0422"
 
@@ -10,21 +9,19 @@ resolvers += Resolver.jcenterRepo
 
 dockerRepository := Some("fsw0422")
 
-dockerCommands ++= Seq(
-  Cmd("USER", "root"),
-  ExecCmd("RUN", "mkdir", "-p", "/usr/sbin/data"),
-  ExecCmd("RUN", "chown", "-R", "daemon:daemon", "/usr/sbin/data"),
-  ExecCmd("VOLUME", "/usr/sbin/data"),
-  Cmd("USER", "daemon"),
-)
-
 val monocleVersion = "1.4.0"
+val slickVersion = "3.2.3"
+val slickPgVersion = "0.17.0"
 
 libraryDependencies ++= Seq(
   guice,
   "javax.mail" % "mail" % "1.4.7",
-  "com.typesafe.slick" %% "slick" % "3.2.3",
-  "com.h2database" % "h2" % "1.4.197",
+  "org.postgresql" % "postgresql" % "42.1.4",
+  "com.typesafe.slick" %% "slick" % slickVersion,
+  "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
+  "com.github.tminglei" %% "slick-pg" % slickPgVersion,
+  "com.github.tminglei" %% "slick-pg_joda-time" % slickPgVersion,
+  "com.github.tminglei" %% "slick-pg_play-json" % slickPgVersion,
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
   "com.github.julien-truffaut" %% "monocle-core" % monocleVersion,
   "com.github.julien-truffaut" %% "monocle-macro" % monocleVersion,

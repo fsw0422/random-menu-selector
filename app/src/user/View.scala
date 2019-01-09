@@ -1,55 +1,50 @@
 package src.user
 
+import java.util.UUID
+
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
-import monocle.macros.GenLens
 import play.api.libs.json.Json
-import src.utils.ViewDatabase
-import src.{Event, EventType}
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
+import src.event.{Event, EventType}
+import src.utils.db.{Dao, ViewDatabase}
 
-case class UserView(id: Option[Long] = None,
-                    name: String = "NONE",
-                    email: String = "NONE")
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+case class UserView(uuid: Option[UUID] = Some(UUID.randomUUID()),
+                    name: String,
+                    email: String)
 
 object UserView {
-  import src.utils.mapper.JsonMapper._
 
   implicit val jsonFormat =
     Json.using[Json.WithDefaultValues].format[UserView]
+
+  val tableName = "user_view"
+  val uuidName = "uuid"
+  val nameName = "name"
+  val emailName = "email"
 }
 
 @Singleton
 class UserViewService @Inject()(viewDatabase: ViewDatabase,
                                 userViewDao: UserViewDao) {
-
   val constructView = Sink.foreach[Event] { event =>
     event.`type` match {
-      case EventType.USER_PROFILE_CREATED_OR_UPDATED =>
-        val userView = event.data.as[UserView]
-        userViewDao
-          .findByEmail(userView.email)
-          .map { userViews =>
-            val targetUserView = if (userViews.nonEmpty) {
-              val modifiedUserView = userViews.head
-              val lens = GenLens[UserView]
-              lens(_.name)
-                .modify(name => modifiedUserView.name)(modifiedUserView)
-              lens(_.email)
-                .modify(email => modifiedUserView.email)(modifiedUserView)
-            } else {
-              userView
-            }
-
-            userViewDao.upsert(targetUserView)
-          }
       case EventType.USER_SCHEMA_EVOLVED =>
-        viewDatabase.evolveViewSchema(event)(
+        viewDatabase.viewVersionNonExistAction(event)(
           targetVersion => userViewDao.evolve(targetVersion)
         )
     }
+  }
+
+  def upsert(userView: UserView) = {
+    userViewDao.upsert(userView)
+  }
+
+  def findByEmail(email: String) = {
+    userViewDao.findByEmail(email)
   }
 
   def findAll() = {
@@ -58,22 +53,21 @@ class UserViewService @Inject()(viewDatabase: ViewDatabase,
 }
 
 @Singleton
-class UserViewDao extends LazyLogging {
+class UserViewDao extends Dao with LazyLogging {
 
-  import slick.jdbc.H2Profile.api._
+  import src.utils.db.PostgresProfile.api._
 
-  class UserViewTable(tag: Tag) extends Table[UserView](tag, "USER_VIEW") {
-    def id = column[Long]("ID", O.PrimaryKey, O.AutoInc)
-    def name = column[String]("NAME")
-    def email = column[String]("EMAIL", O.Unique)
+  class UserViewTable(tag: Tag)
+      extends Table[UserView](tag, UserView.tableName) {
+    def uuid = column[UUID](UserView.uuidName, O.PrimaryKey)
+    def name = column[String](UserView.nameName)
+    def email = column[String](UserView.emailName)
 
     def * =
-      (id.?, name, email) <> ((UserView.apply _).tupled, UserView.unapply)
+      (uuid.?, name, email) <> ((UserView.apply _).tupled, UserView.unapply)
   }
 
   private val userViewTable = TableQuery[UserViewTable]
-
-  private val db = Database.forConfig("h2")
 
   def upsert(userView: UserView) = {
     db.run(userViewTable.insertOrUpdate(userView))
@@ -95,10 +89,10 @@ class UserViewDao extends LazyLogging {
     targetVersion match {
       case "1.0" =>
         db.run(sqlu"""
-          create table USER_VIEW(
-            ID bigint not null auto_increment primary key,
-            NAME varchar not null,
-            EMAIL varchar not null
+          CREATE TABLE #${UserView.tableName}(
+            #${UserView.uuidName} UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            #${UserView.nameName} TEXT DEFAULT '' NOT NULL,
+            #${UserView.emailName} TEXT UNIQUE DEFAULT '' NOT NULL
           )
         """)
       case _ =>

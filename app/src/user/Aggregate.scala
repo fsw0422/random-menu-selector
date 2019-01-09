@@ -6,13 +6,12 @@ import akka.stream.{
   ActorMaterializerSettings,
   OverflowStrategy
 }
-import akka.stream.ThrottleMode.Shaping
 import akka.stream.scaladsl.Source
-import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json.JsValue
-import src.{Event, EventService, EventType}
-import scala.concurrent.duration._
+import monocle.macros.GenLens
+import org.joda.time.DateTime
+import play.api.libs.json.{JsValue, Json}
+import src.event.{Event, EventService, EventType}
 
 @Singleton
 class Aggregate @Inject()(eventService: EventService,
@@ -34,19 +33,40 @@ class Aggregate @Inject()(eventService: EventService,
    */
   private val eventBus = Source
     .queue[Event](5, OverflowStrategy.backpressure)
-    .throttle(1, 2 seconds, 3, Shaping)
-    .alsoTo(eventService.storeEvent)
-    .to(userViewService.constructView)
+    .to(eventService.eventHandler)
     .run()
 
   def createOrUpdateUser(user: JsValue) = {
-    eventBus offer Event(
-      `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
-      data = user
-    )
+    val userView = user.as[UserView]
+    for {
+      updatedMenuView <- userViewService
+        .findByEmail(userView.email)
+        .map { userViews =>
+          val lens = GenLens[UserView]
+          val targetUserView = if (userViews.nonEmpty) {
+            val nameMod = lens(_.name)
+              .modify(name => userView.name)(userViews.head)
+            lens(_.email).modify(email => nameMod.email)(nameMod)
+          } else {
+            userView
+          }
+
+          userViewService.upsert(targetUserView)
+          targetUserView
+        }
+      queueOfferResult <- eventBus offer Event(
+        `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
+        data = Some(Json.toJson(updatedMenuView)),
+        timestamp = DateTime.now
+      )
+    } yield queueOfferResult
   }
 
   def createOrUpdateUserViewSchema(version: JsValue) = {
-    eventBus offer Event(`type` = EventType.USER_SCHEMA_EVOLVED, data = version)
+    eventBus offer Event(
+      `type` = EventType.USER_SCHEMA_EVOLVED,
+      data = Some(version),
+      timestamp = DateTime.now
+    )
   }
 }

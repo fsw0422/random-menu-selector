@@ -1,22 +1,23 @@
-package src
+package src.event
 
+import java.util.UUID
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.DateTime
 import akka.stream.{
   ActorMaterializer,
   ActorMaterializerSettings,
   OverflowStrategy
 }
-import akka.stream.ThrottleMode.Shaping
 import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json.{JsValue, Json}
-import src.EventType.EventType
+import org.joda.time.DateTime
+import play.api.libs.json.JsValue
+import src.event.EventType.EventType
 import src.menu.MenuViewService
 import src.user.UserViewService
+import src.utils.db.{Dao, ViewDatabase}
+
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 object EventType extends Enumeration {
   type EventType = Value
@@ -25,16 +26,17 @@ object EventType extends Enumeration {
     Value
 }
 
-case class Event(id: Option[Long] = None,
-                 timestamp: Option[DateTime] = Some(DateTime.now),
-                 `type`: EventType = EventType.UNKNOWN,
-                 data: JsValue = Json.parse("{}"))
+case class Event(uuid: Option[UUID] = Some(UUID.randomUUID()),
+                 timestamp: DateTime,
+                 `type`: EventType,
+                 data: Option[JsValue])
 
 @Singleton
 class EventService @Inject()(eventDao: EventDao,
+                             viewDatabase: ViewDatabase,
                              menuViewService: MenuViewService,
-                             userViewService: UserViewService) {
-
+                             userViewService: UserViewService)
+    extends LazyLogging {
   private implicit val actorSystem = ActorSystem("Event")
   private implicit val executionContext = actorSystem.dispatcher
   private implicit val actorMaterializerSettings = ActorMaterializerSettings(
@@ -44,35 +46,36 @@ class EventService @Inject()(eventDao: EventDao,
     actorMaterializerSettings
   )
 
-  val storeEvent = Sink.foreach[Event] { event =>
-    eventDao.insert(event)
-  }
-
-  /*
-   * This method is to replay and construct view
-   */
-  val viewEventBus = Source
+  val menuViewEventBus = Source
     .queue[Event](5, OverflowStrategy.backpressure)
-    .throttle(1, 2 seconds, 3, Shaping)
-    .alsoTo(menuViewService.constructView)
+    .to(menuViewService.constructView)
+    .run()
+
+  val userViewEventBus = Source
+    .queue[Event](5, OverflowStrategy.backpressure)
     .to(userViewService.constructView)
     .run()
 
-  /*
-   * This method is to replay and construct view
-   */
-  def replay(from: Long) = {
-    eventDao
-      .findByTimeStamp(DateTime(from))
-      .map(events => events.map(event => viewEventBus offer event))
+  val eventHandler = Sink.foreach[Event] { event =>
+    event.`type` match {
+      case EventType.RANDOM_MENU_ASKED |
+          EventType.MENU_PROFILE_CREATED_OR_UPDATED |
+          EventType.MENU_SCHEMA_EVOLVED =>
+        menuViewEventBus offer event
+      case EventType.USER_PROFILE_CREATED_OR_UPDATED |
+          EventType.USER_SCHEMA_EVOLVED =>
+        userViewEventBus offer event
+      case _ =>
+        logger.error(s"Action of Event type ${event.`type`} does not exist")
+    }
+    eventDao.insert(event)
   }
 }
 
 @Singleton
-class EventDao extends LazyLogging {
+class EventDao extends Dao with LazyLogging {
 
-  import slick.jdbc.H2Profile.api._
-  import src.utils.mapper.ObjectRelationalMapper._
+  import src.utils.db.PostgresProfile.api._
 
   implicit val eventTypeMapper =
     MappedColumnType.base[EventType.Value, String](
@@ -80,19 +83,17 @@ class EventDao extends LazyLogging {
       str => EventType.withName(str)
     )
 
-  class EventTable(tag: Tag) extends Table[Event](tag, "EVENT") {
-    def id = column[Long]("ID", O.PrimaryKey, O.AutoInc)
-    def timeStamp = column[DateTime]("TIME_STAMP")
-    def `type` = column[EventType]("TYPE")
-    def data = column[JsValue]("DATA")
+  class EventTable(tag: Tag) extends Table[Event](tag, "event") {
+    def uuid = column[UUID]("uuid", O.PrimaryKey, O.Default(UUID.randomUUID()))
+    def timestamp = column[DateTime]("timestamp", O.Default(DateTime.now()))
+    def `type` = column[EventType]("type", O.Default(EventType.UNKNOWN))
+    def data = column[JsValue]("data")
 
     def * =
-      (id.?, timeStamp.?, `type`, data) <> (Event.tupled, Event.unapply)
+      (uuid.?, timestamp, `type`, data.?) <> (Event.tupled, Event.unapply)
   }
 
   private val eventTable = TableQuery[EventTable]
-
-  private val db = Database.forConfig("h2")
 
   def insert(event: Event) = {
     db.run(eventTable += event)
@@ -101,7 +102,7 @@ class EventDao extends LazyLogging {
   def findByTimeStamp(startTime: DateTime): Future[Seq[Event]] = {
     db.run(
       eventTable
-        .filter(event => event.timeStamp >= startTime)
+        .filter(event => event.timestamp >= startTime)
         .result
     )
   }

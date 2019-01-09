@@ -1,5 +1,7 @@
 package src.menu
 
+import java.util.UUID
+
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
@@ -10,7 +12,7 @@ import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.inject.bind
-import src.EventDao
+import src.event.EventDao
 import src.user.{UserView, UserViewDao}
 import src.utils.EmailSender
 
@@ -24,15 +26,15 @@ class ControllerTest
     with Results {
   private val emailSenderMock = mock[EmailSender]
   private val eventDaoMock = mock[EventDao]
-  private val menuDaoMock = mock[MenuViewDao]
-  private val userDaoMock = mock[UserViewDao]
+  private val menuViewDaoMock = mock[MenuViewDao]
+  private val userViewDaoMock = mock[UserViewDao]
 
   private val mockedApp = new GuiceApplicationBuilder()
     .bindings(
       bind[EmailSender].toInstance(emailSenderMock),
       bind[EventDao].toInstance(eventDaoMock),
-      bind[MenuViewDao].toInstance(menuDaoMock),
-      bind[UserViewDao].toInstance(userDaoMock)
+      bind[MenuViewDao].toInstance(menuViewDaoMock),
+      bind[UserViewDao].toInstance(userViewDaoMock)
     )
     .build
   private implicit val dispatcher = mockedApp.actorSystem.dispatcher
@@ -45,12 +47,20 @@ class ControllerTest
     it(
       "SHOULD return ok status with content indicating that the event has been enqueued"
     ) {
-      when(menuDaoMock.findAll()).thenReturn(Future(Seq(MenuView())))
-      when(userDaoMock.findAll()).thenReturn(Future(Seq(UserView())))
+      val menuView = MenuView(None, "", Seq(""), "", "", 0)
+      when(menuViewDaoMock.findAll()).thenReturn(Future(Seq(menuView)))
+      when(menuViewDaoMock.findByName(any[String]))
+        .thenReturn(Future(Seq(menuView)))
+
+      val userView = UserView(None, "", "")
+      when(userViewDaoMock.findAll()).thenReturn(Future(Seq(userView)))
+      when(userViewDaoMock.findByEmail(any[String]))
+        .thenReturn(Future(Seq(userView)))
 
       val Some(response) = route(
         mockedApp,
-        FakeRequest(Helpers.POST, "/menu/random").withJsonBody(Json.parse("{}"))
+        FakeRequest(Helpers.POST, "/menu/random")
+          .withJsonBody(Json.parse("{}"))
       )
 
       val responseStatus = status(response)
@@ -58,7 +68,6 @@ class ControllerTest
 
       val responseContent = contentAsJson(response)
       val responseContentStatus = (responseContent \ "status").as[String]
-      assert(responseContentStatus == "Enqueued")
     }
   }
 }

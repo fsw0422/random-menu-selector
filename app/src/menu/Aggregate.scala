@@ -1,7 +1,6 @@
 package src.menu
 
 import akka.actor.ActorSystem
-import akka.stream.ThrottleMode.Shaping
 import akka.stream.scaladsl.Source
 import akka.stream.{
   ActorMaterializer,
@@ -10,9 +9,11 @@ import akka.stream.{
 }
 import com.typesafe.config.Config
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json.JsValue
+import monocle.macros.GenLens
+import org.joda.time.DateTime
+import play.api.libs.json.{JsValue, Json}
+import src.event.{Event, EventService, EventType}
 import src.user.{UserView, UserViewService}
-import src.{Event, EventService, EventType}
 import src.utils.{Email, EmailSender}
 
 import scala.concurrent.duration._
@@ -35,46 +36,83 @@ class Aggregate @Inject()(config: Config,
   )
 
   /*
-   * Event.scala bus stream that acts as a broker between aggregate and
-   * - Event.scala Store which stores the events
-   * - View component that constructs / persists view models
+   * Event bus stream that connects Aggregate and the Event storage
    */
   private val eventBus = Source
     .queue[Event](5, OverflowStrategy.backpressure)
-    .throttle(1, 2 seconds, 3, Shaping)
-    .alsoTo(eventService.storeEvent)
-    .to(menuViewService.constructView)
+    .to(eventService.eventHandler)
     .run()
 
   def createOrUpdateMenu(menu: JsValue) = {
-    eventBus offer Event(
-      `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
-      data = menu
-    )
+    val menuView = menu.as[MenuView]
+    for {
+      updatedMenuView <- menuViewService
+        .findByName(menuView.name)
+        .map { menuViews =>
+          if (menuViews.nonEmpty) {
+            val lens = GenLens[MenuView]
+            val nameMod = lens(_.name)
+              .modify(name => menuViews.head.name)(menuViews.head)
+            val ingredientMod = lens(_.ingredients)
+              .modify(ingredients => nameMod.ingredients)(nameMod)
+            val recipeMod = lens(_.recipe)
+              .modify(recipe => ingredientMod.recipe)(ingredientMod)
+            lens(_.link).modify(link => recipeMod.link)(recipeMod)
+          } else {
+            menuView
+          }
+        }
+      queueOfferResult <- eventBus offer Event(
+        `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
+        data = Some(Json.toJson(updatedMenuView)),
+        timestamp = DateTime.now
+      )
+    } yield queueOfferResult
   }
 
   def selectRandomMenu() = {
     for {
       menuViews <- menuViewService.findAll()
       userViews <- userViewService.findAll()
-      randomMenu = if (menuViews.nonEmpty) {
+      randomMenuView = if (menuViews.nonEmpty) {
         Random.shuffle(menuViews).head
       } else {
-        MenuView()
+        MenuView(
+          name = "NONE",
+          ingredients = Seq("NONE"),
+          recipe = "NONE",
+          link = "",
+          selectedCount = 0
+        )
       }
+      updatedRandomMenuView <- menuViewService
+        .findByName(randomMenuView.name)
+        .map { menuViews =>
+          if (menuViews.nonEmpty) {
+            GenLens[MenuView](_.selectedCount).modify(_ + 1)(menuViews.head)
+          } else {
+            randomMenuView
+          }
+        }
       queueOfferResult <- eventBus offer Event(
-        `type` = EventType.RANDOM_MENU_ASKED
+        `type` = EventType.RANDOM_MENU_ASKED,
+        data = Some(Json.toJson(updatedRandomMenuView)),
+        timestamp = DateTime.now
       )
     } yield {
       if (userViews.nonEmpty && menuViews.nonEmpty) {
-        sendEmail(randomMenu, userViews)
+        sendEmail(randomMenuView, userViews)
       }
       queueOfferResult
     }
   }
 
   def createOrUpdateMenuViewSchema(version: JsValue) = {
-    eventBus offer Event(`type` = EventType.MENU_SCHEMA_EVOLVED, data = version)
+    eventBus offer Event(
+      `type` = EventType.MENU_SCHEMA_EVOLVED,
+      data = Some(version),
+      timestamp = DateTime.now
+    )
   }
 
   private def sendEmail(menu: MenuView, users: Seq[UserView]) = {
