@@ -1,4 +1,4 @@
-package src.user
+package user
 
 import java.util.UUID
 
@@ -6,8 +6,8 @@ import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import src.event.{Event, EventType}
-import src.utils.db.{Dao, ViewDatabase}
+import event.{Event, EventType}
+import utils.db.{Dao, ViewDatabase}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -50,7 +50,7 @@ class UserViewService @Inject()(userViewDao: UserViewDao) extends LazyLogging {
 @Singleton
 class UserViewDao extends Dao with LazyLogging {
 
-  import src.utils.db.PostgresProfile.api._
+  import utils.db.PostgresProfile.api._
 
   class UserViewTable(tag: Tag)
       extends Table[UserView](tag, UserView.tableName) {

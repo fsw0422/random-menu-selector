@@ -1,8 +1,8 @@
-package src.utils.db
+package utils.db
 
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
-import src.event.{Event, EventDao}
+import event.{Event, EventDao}
 
 import scala.concurrent.ExecutionContext
 

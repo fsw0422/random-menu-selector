@@ -1,4 +1,4 @@
-package src.utils
+package utils
 
 import java.util.{Date, Properties}
 import javax.inject.Singleton

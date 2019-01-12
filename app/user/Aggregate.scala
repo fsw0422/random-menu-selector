@@ -1,4 +1,4 @@
-package src.user
+package user
 
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
@@ -6,7 +6,7 @@ import javax.inject.{Inject, Singleton}
 import monocle.macros.GenLens
 import org.joda.time.DateTime
 import play.api.libs.json.{JsValue, Json}
-import src.event.{Event, EventService, EventType}
+import event.{Event, EventService, EventType}
 
 @Singleton
 class Aggregate @Inject()(eventService: EventService,

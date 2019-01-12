@@ -1,4 +1,4 @@
-package src.user
+package user
 
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json

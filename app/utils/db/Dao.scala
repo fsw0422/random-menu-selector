@@ -1,4 +1,4 @@
-package src.utils.db
+package utils.db
 
 import slick.basic.DatabaseConfig
 import slick.jdbc.JdbcProfile

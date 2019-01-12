@@ -1,4 +1,4 @@
-package src.utils.db
+package utils.db
 
 import com.github.tminglei.slickpg._
 import slick.basic.Capability
@@ -42,7 +42,7 @@ trait PostgresProfile
 
 object PostgresProfile extends PostgresProfile with Dao {
 
-  import src.utils.db.PostgresProfile.api._
+  import PostgresProfile.api._
 
   // init database
   db.run(sqlu"""CREATE EXTENSION pgcrypto""")

@@ -1,4 +1,4 @@
-package src.menu
+package menu
 
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
@@ -7,9 +7,9 @@ import javax.inject.{Inject, Singleton}
 import monocle.macros.GenLens
 import org.joda.time.DateTime
 import play.api.libs.json.{JsValue, Json}
-import src.event.{Event, EventService, EventType}
-import src.user.{UserView, UserViewService}
-import src.utils.{Email, EmailSender}
+import event.{Event, EventService, EventType}
+import user.{UserView, UserViewService}
+import utils.{Email, EmailSender}
 import scala.util.Random
 
 @Singleton

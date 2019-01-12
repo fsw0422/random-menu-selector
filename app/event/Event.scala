@@ -1,4 +1,4 @@
-package src.event
+package event
 
 import java.util.UUID
 
@@ -13,10 +13,10 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime
 import play.api.libs.json.JsValue
-import src.event.EventType.EventType
-import src.menu.{MenuView, MenuViewService}
-import src.user.{UserView, UserViewService}
-import src.utils.db.{Dao, ViewDatabase}
+import event.EventType.EventType
+import menu.{MenuView, MenuViewService}
+import user.{UserView, UserViewService}
+import utils.db.{Dao, ViewDatabase}
 
 import scala.concurrent.Future
 
@@ -108,7 +108,7 @@ class EventService @Inject()(eventDao: EventDao,
 @Singleton
 class EventDao extends Dao with LazyLogging {
 
-  import src.utils.db.PostgresProfile.api._
+  import utils.db.PostgresProfile.api._
 
   implicit val eventTypeMapper =
     MappedColumnType.base[EventType.Value, String](

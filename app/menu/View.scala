@@ -1,4 +1,4 @@
-package src.menu
+package menu
 
 import java.util.UUID
 
@@ -6,8 +6,8 @@ import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
-import src.event.{Event, EventType}
-import src.utils.db.{Dao, ViewDatabase}
+import event.{Event, EventType}
+import utils.db.{Dao, ViewDatabase}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -56,7 +56,7 @@ class MenuViewService @Inject()(menuViewDao: MenuViewDao) extends LazyLogging {
 @Singleton
 class MenuViewDao extends Dao with LazyLogging {
 
-  import src.utils.db.PostgresProfile.api._
+  import utils.db.PostgresProfile.api._
 
   class MenuViewTable(tag: Tag)
       extends Table[MenuView](tag, MenuView.tableColumn) {

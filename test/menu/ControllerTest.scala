@@ -1,4 +1,4 @@
-package src.menu
+package menu
 
 import java.util.UUID
 
@@ -12,9 +12,9 @@ import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.inject.bind
-import src.event.EventDao
-import src.user.{UserView, UserViewDao}
-import src.utils.EmailSender
+import event.EventDao
+import user.{UserView, UserViewDao}
+import utils.EmailSender
 
 import scala.concurrent.Future
 

@@ -1,4 +1,4 @@
-package src.menu
+package menu
 
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
