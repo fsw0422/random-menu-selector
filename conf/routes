@@ -1,8 +1,8 @@
 # Menu
-POST     /menu                       src.menu.Controller.createOrUpdateMenu()
-POST     /menu/random                src.menu.Controller.selectRandomMenu()
-POST     /menu/view                  src.menu.Controller.createOrUpdateMenuViewSchema()
+POST     /menu                       menu.Controller.createOrUpdateMenu()
+POST     /menu/random                menu.Controller.selectRandomMenu()
+POST     /menu/view                  menu.Controller.createOrUpdateMenuViewSchema()
 
 # User
-POST     /user                       src.user.Controller.createOrUpdateUser()
-POST     /user/view                  src.user.Controller.createOrUpdateUserViewSchema()
+POST     /user                       user.Controller.createOrUpdateUser()
+POST     /user/view                  user.Controller.createOrUpdateUserViewSchema()
