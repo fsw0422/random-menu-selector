@@ -6,3 +6,6 @@ POST     /menu/view                  menu.Controller.createOrUpdateMenuViewSchem
 # User
 POST     /user                       user.Controller.createOrUpdateUser()
 POST     /user/view                  user.Controller.createOrUpdateUserViewSchema()
+
+# Webpage
+GET      /assets/*file               controllers.Assets.at(path="/public", file)
