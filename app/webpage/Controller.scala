@@ -1,8 +1,7 @@
-package src.webpage
+package webpage
 
-import javax.inject.Inject
+import javax.inject.{Singleton, Inject}
 import play.api.mvc.{AbstractController, ControllerComponents}
-
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -11,7 +10,4 @@ class Controller @Inject()()(
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
 
-  def createOrUpdateUser() = Action.async(parse.json) { implicit request =>
-    Future(OK(src.webpage.index.html))
-  }
 }
