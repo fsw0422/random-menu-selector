@@ -1,7 +1,48 @@
 <!DOCTYPE html>
 <html>
-  <head></head>
+  <head>
+    <!-- CSS -->
+    <link rel="stylesheet" href="./stylesheets/bootstrap.min.css">
+
+    <!-- JS -->
+    <script src="./javascripts/jquery-3.3.1.min.js"></script>
+    <script src="./javascripts/popper.min.js"></script>
+    <script src="./javascripts/bootstrap.min.js"></script>
+  </head>
   <body>
-    <h1>hello</h1>
+    <div class="jumbotron text-center">
+      <h1>My First Bootstrap Page</h1>
+      <p>Resize this responsive page to see the effect!</p>
+    </div>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-4">
+          <h3>Hello</h3>
+          <p>Lorem ipsum dolor..</p>
+          <p>Ut enim ad..</p>
+        </div>
+        <div class="col-sm-4">
+          <h3>Column 2</h3>
+          <p>Lorem ipsum dolor..</p>
+          <p>Ut enim ad..</p>
+        </div>
+        <div class="col-sm-4">
+          <h3>Column 3</h3>
+          <p>Lorem ipsum dolor..</p>
+          <p>Ut enim ad..</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="usr">Name:</label>
+      <input type="text" class="form-control" id="usr">
+    </div>
+    <div class="form-group">
+      <label for="pwd">Password:</label>
+      <input type="password" class="form-control" id="pwd">
+    </div>
+
   </body>
 </html>
