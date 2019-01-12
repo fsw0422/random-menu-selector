@@ -28,22 +28,7 @@ object UserView {
 }
 
 @Singleton
-class UserViewService @Inject()(viewDatabase: ViewDatabase,
-                                userViewDao: UserViewDao)
-    extends LazyLogging {
-
-  val constructView = Sink.foreach[Event] { event =>
-    event.`type` match {
-      case EventType.USER_PROFILE_CREATED_OR_UPDATED =>
-        userViewDao.upsert(event.data.get.as[UserView])
-      case EventType.USER_SCHEMA_EVOLVED =>
-        viewDatabase.viewVersionNonExistAction(event)(
-          targetVersion => userViewDao.evolve(targetVersion)
-        )
-      case _ =>
-        logger.error(s"No such event type [${event.`type`}]")
-    }
-  }
+class UserViewService @Inject()(userViewDao: UserViewDao) extends LazyLogging {
 
   def upsert(userView: UserView) = {
     userViewDao.upsert(userView)
@@ -55,6 +40,10 @@ class UserViewService @Inject()(viewDatabase: ViewDatabase,
 
   def findAll() = {
     userViewDao.findAll()
+  }
+
+  def evolve(targetVersion: String) = {
+    userViewDao.evolve(targetVersion)
   }
 }
 

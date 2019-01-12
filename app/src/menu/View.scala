@@ -34,23 +34,7 @@ object MenuView {
 }
 
 @Singleton
-class MenuViewService @Inject()(viewDatabase: ViewDatabase,
-                                menuViewDao: MenuViewDao)
-    extends LazyLogging {
-
-  val constructView = Sink.foreach[Event] { event =>
-    event.`type` match {
-      case EventType.RANDOM_MENU_ASKED |
-          EventType.MENU_PROFILE_CREATED_OR_UPDATED =>
-        menuViewDao.upsert(event.data.get.as[MenuView])
-      case EventType.MENU_SCHEMA_EVOLVED =>
-        viewDatabase.viewVersionNonExistAction(event)(
-          targetVersion => menuViewDao.evolve(targetVersion)
-        )
-      case _ =>
-        logger.error(s"No such event type [${event.`type`}]")
-    }
-  }
+class MenuViewService @Inject()(menuViewDao: MenuViewDao) extends LazyLogging {
 
   def upsert(menuView: MenuView) = {
     menuViewDao.upsert(menuView)
@@ -62,6 +46,10 @@ class MenuViewService @Inject()(viewDatabase: ViewDatabase,
 
   def findAll(): Future[Seq[MenuView]] = {
     menuViewDao.findAll()
+  }
+
+  def evolve(targetVersion: String) = {
+    menuViewDao.evolve(targetVersion)
   }
 }
 

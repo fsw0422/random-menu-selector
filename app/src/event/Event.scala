@@ -1,20 +1,21 @@
 package src.event
 
 import java.util.UUID
+
 import akka.actor.ActorSystem
 import akka.stream.{
   ActorMaterializer,
   ActorMaterializerSettings,
   OverflowStrategy
 }
-import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime
 import play.api.libs.json.JsValue
 import src.event.EventType.EventType
-import src.menu.MenuViewService
-import src.user.UserViewService
+import src.menu.{MenuView, MenuViewService}
+import src.user.{UserView, UserViewService}
 import src.utils.db.{Dao, ViewDatabase}
 
 import scala.concurrent.Future
@@ -47,42 +48,61 @@ class EventService @Inject()(eventDao: EventDao,
     actorMaterializerSettings
   )
 
-  val menuEventBus =
-    Source
-      .queue[Event](5, OverflowStrategy.backpressure)
-      .via {
-        Flow[Event].map { event =>
-          event.`type` match {
-            case EventType.RANDOM_MENU_ASKED |
-                EventType.MENU_PROFILE_CREATED_OR_UPDATED |
-                EventType.MENU_SCHEMA_EVOLVED =>
-              eventDao.insert(event)
-            case _ =>
-              logger.error(s"No such event type [${event.`type`}]")
-          }
-          event
-        }
-      }
-      .to(menuViewService.constructView)
-      .run()
+  val menuEventBus = eventStream(5) { event =>
+    event.`type` match {
+      case EventType.RANDOM_MENU_ASKED |
+          EventType.MENU_PROFILE_CREATED_OR_UPDATED |
+          EventType.MENU_SCHEMA_EVOLVED =>
+        eventDao.insert(event)
+      case _ =>
+        logger.error(s"No such event type [${event.`type`}]")
+    }
+    event
+  } { event =>
+    event.`type` match {
+      case EventType.RANDOM_MENU_ASKED |
+          EventType.MENU_PROFILE_CREATED_OR_UPDATED =>
+        menuViewService.upsert(event.data.get.as[MenuView])
+      case EventType.MENU_SCHEMA_EVOLVED =>
+        viewDatabase.viewVersionNonExistAction(event)(
+          targetVersion => menuViewService.evolve(targetVersion)
+        )
+      case _ =>
+        logger.error(s"No such event type [${event.`type`}]")
+    }
+  }
 
-  val userEventBus =
+  val userEventBus = eventStream(5) { event =>
+    event.`type` match {
+      case EventType.USER_PROFILE_CREATED_OR_UPDATED |
+          EventType.USER_SCHEMA_EVOLVED =>
+        eventDao.insert(event)
+      case _ =>
+        logger.error(s"No such event type [${event.`type`}]")
+    }
+    event
+  } { event =>
+    event.`type` match {
+      case EventType.USER_PROFILE_CREATED_OR_UPDATED =>
+        userViewService.upsert(event.data.get.as[UserView])
+      case EventType.USER_SCHEMA_EVOLVED =>
+        viewDatabase.viewVersionNonExistAction(event)(
+          targetVersion => userViewService.evolve(targetVersion)
+        )
+      case _ =>
+        logger.error(s"No such event type [${event.`type`}]")
+    }
+  }
+
+  private def eventStream(
+    bufferSize: Int
+  )(flowHandler: Event => Event)(sinkHandler: Event => Any) = {
     Source
-      .queue[Event](5, OverflowStrategy.backpressure)
-      .via {
-        Flow[Event].map { event =>
-          event.`type` match {
-            case EventType.USER_PROFILE_CREATED_OR_UPDATED |
-                EventType.USER_SCHEMA_EVOLVED =>
-              eventDao.insert(event)
-            case _ =>
-              logger.error(s"No such event type [${event.`type`}]")
-          }
-          event
-        }
-      }
-      .to(userViewService.constructView)
+      .queue[Event](bufferSize, OverflowStrategy.backpressure)
+      .via(Flow[Event].map(event => flowHandler.apply(event)))
+      .to(Sink.foreach[Event](event => sinkHandler.apply(event)))
       .run()
+  }
 }
 
 @Singleton
