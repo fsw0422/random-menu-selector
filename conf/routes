@@ -1,11 +1,11 @@
 # Menu
-POST     /menu                       menu.Controller.createOrUpdateMenu()
-POST     /menu/random                menu.Controller.selectRandomMenu()
-POST     /menu/view                  menu.Controller.createOrUpdateMenuViewSchema()
+POST     /menu                       menu.CommandController.createOrUpdateMenu()
+POST     /menu/random                menu.CommandController.selectRandomMenu()
+POST     /menu/view                  menu.CommandController.createOrUpdateMenuViewSchema()
 
 # User
-POST     /user                       user.Controller.createOrUpdateUser()
-POST     /user/view                  user.Controller.createOrUpdateUserViewSchema()
+POST     /user                       user.CommandController.createOrUpdateUser()
+POST     /user/view                  user.CommandController.createOrUpdateUserViewSchema()
 
 # Webpage
-GET      /admin/*file               controllers.Assets.at(path="/public", file)
+GET      /admin/*file                controllers.Assets.at(path="/public", file)

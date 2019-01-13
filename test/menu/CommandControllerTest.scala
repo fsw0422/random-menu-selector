@@ -19,7 +19,7 @@ import utils.EmailSender
 import scala.concurrent.Future
 
 @RunWith(classOf[JUnitRunner])
-class ControllerTest
+class CommandControllerTest
     extends FunSpec
     with MockitoSugar
     with ArgumentMatchersSugar

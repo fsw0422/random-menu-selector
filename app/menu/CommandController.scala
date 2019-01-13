@@ -1,29 +1,38 @@
-package user
+package menu
 
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import play.api.mvc.{AbstractController, ControllerComponents}
+import play.api.mvc._
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class Controller @Inject()(aggregate: Aggregate)(
+class CommandController @Inject()(aggregate: Aggregate)(
   implicit controllerComponents: ControllerComponents,
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
 
-  def createOrUpdateUser() =
+  def createOrUpdateMenu() =
     Action.async(parse.json) { implicit request =>
       aggregate
-        .createOrUpdateUser(request.body)
+        .createOrUpdateMenu(request.body)
         .map { result =>
           Ok(Json.obj("uuid" -> Json.toJson(result)))
         }
     }
 
-  def createOrUpdateUserViewSchema() =
+  def selectRandomMenu() =
     Action.async(parse.json) { implicit request =>
       aggregate
-        .createOrUpdateUserViewSchema(request.body)
+        .selectRandomMenu()
+        .map { result =>
+          Ok(Json.obj("uuid" -> Json.toJson(result)))
+        }
+    }
+
+  def createOrUpdateMenuViewSchema() =
+    Action.async(parse.json) { implicit request =>
+      aggregate
+        .createOrUpdateMenuViewSchema(request.body)
         .map { result =>
           Ok(Json.obj("status" -> Json.toJson("Database Evolution Requested")))
         }
