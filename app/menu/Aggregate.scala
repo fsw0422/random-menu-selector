@@ -47,12 +47,16 @@ class Aggregate @Inject()(config: Config,
             menuView
           }
         }
-      queueOfferResult <- eventService.menuEventBus offer Event(
+    } yield {
+      val event = Event(
         `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
         data = Some(Json.toJson(updatedMenuView)),
         timestamp = DateTime.now
       )
-    } yield queueOfferResult
+      eventService.menuEventBus offer event
+
+      updatedMenuView.uuid.get
+    }
   }
 
   def selectRandomMenu() = {
@@ -79,25 +83,29 @@ class Aggregate @Inject()(config: Config,
             randomMenuView
           }
         }
-      queueOfferResult <- eventService.menuEventBus offer Event(
+    } yield {
+      val event = Event(
         `type` = EventType.RANDOM_MENU_ASKED,
         data = Some(Json.toJson(updatedRandomMenuView)),
         timestamp = DateTime.now
       )
-    } yield {
+      eventService.menuEventBus offer event
+
       if (userViews.nonEmpty && menuViews.nonEmpty) {
         sendEmail(randomMenuView, userViews)
       }
-      queueOfferResult
+
+      updatedRandomMenuView.uuid.get
     }
   }
 
   def createOrUpdateMenuViewSchema(version: JsValue) = {
-    eventService.menuEventBus offer Event(
+    val event = Event(
       `type` = EventType.MENU_SCHEMA_EVOLVED,
       data = Some(version),
       timestamp = DateTime.now
     )
+    eventService.menuEventBus offer event
   }
 
   private def sendEmail(menu: MenuView, users: Seq[UserView]) = {

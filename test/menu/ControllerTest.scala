@@ -47,12 +47,14 @@ class ControllerTest
     it(
       "SHOULD return ok status with content indicating that the event has been enqueued"
     ) {
-      val menuView = MenuView(None, "", Seq(""), "", "", 0)
+      val menuUuid = UUID.fromString("123e4567-e89b-12d3-a456-426655440000")
+      val menuView = MenuView(Some(menuUuid), "", Seq(""), "", "", 0)
       when(menuViewDaoMock.findAll()).thenReturn(Future(Seq(menuView)))
       when(menuViewDaoMock.findByName(any[String]))
         .thenReturn(Future(Seq(menuView)))
 
-      val userView = UserView(None, "", "")
+      val userUuid = UUID.fromString("223e4567-e89b-12d3-a456-426655440000")
+      val userView = UserView(Some(userUuid), "", "")
       when(userViewDaoMock.findAll()).thenReturn(Future(Seq(userView)))
       when(userViewDaoMock.findByEmail(any[String]))
         .thenReturn(Future(Seq(userView)))
@@ -67,7 +69,8 @@ class ControllerTest
       assert(responseStatus == OK)
 
       val responseContent = contentAsJson(response)
-      val responseContentStatus = (responseContent \ "status").as[String]
+      val uuid = (responseContent \ "uuid").as[String]
+      assert(uuid == "123e4567-e89b-12d3-a456-426655440000")
     }
   }
 }

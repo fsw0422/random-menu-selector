@@ -15,13 +15,17 @@ class Controller @Inject()(aggregate: Aggregate)(
     Action.async(parse.json) { implicit request =>
       aggregate
         .createOrUpdateUser(request.body)
-        .map(result => Ok(Json.obj("status" -> Json.toJson(result.toString))))
+        .map { result =>
+          Ok(Json.obj("uuid" -> Json.toJson(result)))
+        }
     }
 
   def createOrUpdateUserViewSchema() =
     Action.async(parse.json) { implicit request =>
       aggregate
         .createOrUpdateUserViewSchema(request.body)
-        .map(result => Ok(Json.obj("status" -> Json.toJson(result.toString))))
+        .map { result =>
+          Ok(Json.obj("status" -> Json.toJson("Database Evolution Requested")))
+        }
     }
 }

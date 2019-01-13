@@ -2,6 +2,7 @@ package user
 
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import monocle.macros.GenLens
 import org.joda.time.DateTime
@@ -24,32 +25,36 @@ class Aggregate @Inject()(eventService: EventService,
   def createOrUpdateUser(user: JsValue) = {
     val userView = user.as[UserView]
     for {
-      updatedMenuView <- userViewService
+      updatedUserView <- userViewService
         .findByEmail(userView.email)
         .map { userViews =>
           val lens = GenLens[UserView]
-          val targetUserView = if (userViews.nonEmpty) {
+          if (userViews.nonEmpty) {
             val nameMod = lens(_.name)
               .modify(name => userView.name)(userViews.head)
             lens(_.email).modify(email => nameMod.email)(nameMod)
           } else {
             userView
           }
-          targetUserView
         }
-      queueOfferResult <- eventService.userEventBus offer Event(
+    } yield {
+      val event = Event(
         `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
-        data = Some(Json.toJson(updatedMenuView)),
+        data = Some(Json.toJson(updatedUserView)),
         timestamp = DateTime.now
       )
-    } yield queueOfferResult
+      eventService.userEventBus offer event
+
+      updatedUserView.uuid.get
+    }
   }
 
   def createOrUpdateUserViewSchema(version: JsValue) = {
-    eventService.userEventBus offer Event(
+    val event = Event(
       `type` = EventType.USER_SCHEMA_EVOLVED,
       data = Some(version),
       timestamp = DateTime.now
     )
+    eventService.userEventBus offer event
   }
 }
