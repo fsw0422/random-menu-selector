@@ -2,10 +2,12 @@
 POST     /menu                       menu.CommandController.createOrUpdateMenu()
 POST     /menu/random                menu.CommandController.selectRandomMenu()
 POST     /menu/view                  menu.CommandController.createOrUpdateMenuViewSchema()
+GET      /menu/view                  menu.QueryController.getAllMenus()
 
 # User
 POST     /user                       user.CommandController.createOrUpdateUser()
 POST     /user/view                  user.CommandController.createOrUpdateUserViewSchema()
 
 # Webpage
+GET      /                           controllers.RedirectController.index()
 GET      /admin/*file                controllers.Assets.at(path="/public", file)

@@ -13,9 +13,11 @@ class QueryController @Inject()(userViewService: UserViewService)(
 ) extends AbstractController(controllerComponents) {
 
   def getAllMenus() =
-    Action.async(parse.json) { implicit request =>
-      userViewService.findAll().map { userViews =>
-        Ok(Json.obj("result" -> Json.toJson(userViews)))
-      }
+    Action.async { implicit request =>
+      userViewService
+        .findAll()
+        .map { userViews =>
+          Ok(Json.obj("result" -> Json.toJson(userViews)))
+        }
     }
 }
