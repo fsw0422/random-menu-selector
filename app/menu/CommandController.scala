@@ -1,23 +1,32 @@
 package menu
 
+import auth.Auth
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc._
-import scala.concurrent.ExecutionContext
+import utils.ResponseMessage
+
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class CommandController @Inject()(aggregate: Aggregate)(
+class CommandController @Inject()(auth: Auth, aggregate: Aggregate)(
   implicit controllerComponents: ControllerComponents,
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
 
   def createOrUpdateMenu() =
     Action.async(parse.json) { implicit request =>
-      aggregate
-        .createOrUpdateMenu(request.body)
-        .map { result =>
-          Ok(Json.obj("uuid" -> Json.toJson(result)))
+      val password = (request.body \ "password").asOpt[String]
+      for {
+        isAuth <- auth.checkPassword(password)
+        result <- {
+          if (isAuth) {
+            aggregate.createOrUpdateMenu(request.body)
+          } else {
+            Future(ResponseMessage.UNAUTHORIZED)
+          }
         }
+      } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
     }
 
   def selectRandomMenu() =
@@ -25,16 +34,22 @@ class CommandController @Inject()(aggregate: Aggregate)(
       aggregate
         .selectRandomMenu()
         .map { result =>
-          Ok(Json.obj("uuid" -> Json.toJson(result)))
+          Ok(Json.obj("result" -> Json.toJson(result)))
         }
     }
 
   def createOrUpdateMenuViewSchema() =
     Action.async(parse.json) { implicit request =>
-      aggregate
-        .createOrUpdateMenuViewSchema(request.body)
-        .map { result =>
-          Ok(Json.obj("status" -> Json.toJson("Database Evolution Requested")))
+      val password = (request.body \ "password").asOpt[String]
+      for {
+        isAuth <- auth.checkPassword(password)
+        result <- {
+          if (isAuth) {
+            aggregate.createOrUpdateMenuViewSchema(request.body)
+          } else {
+            Future(ResponseMessage.DATABASE_EVOLUTION)
+          }
         }
+      } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
     }
 }

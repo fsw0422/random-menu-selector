@@ -1,0 +1,6 @@
+package utils
+
+object ResponseMessage {
+  val UNAUTHORIZED = "ACCESS DENIED"
+  val DATABASE_EVOLUTION = "DATABASE EVOLUTION SUBMITTED"
+}
