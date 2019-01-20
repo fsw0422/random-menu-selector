@@ -16,9 +16,8 @@ class CommandController @Inject()(auth: Auth, aggregate: Aggregate)(
 
   def createOrUpdateUser() =
     Action.async(parse.json) { implicit request =>
-      val password = (request.body \ "password").asOpt[String]
       for {
-        isAuth <- auth.checkPassword(password)
+        isAuth <- auth.checkPassword(request.body)
         result <- {
           if (isAuth) {
             aggregate.createOrUpdateUser(request.body)
@@ -31,9 +30,8 @@ class CommandController @Inject()(auth: Auth, aggregate: Aggregate)(
 
   def createOrUpdateUserViewSchema() =
     Action.async(parse.json) { implicit request =>
-      val password = (request.body \ "password").asOpt[String]
       for {
-        isAuth <- auth.checkPassword(password)
+        isAuth <- auth.checkPassword(request.body)
         result <- {
           if (isAuth) {
             aggregate.createOrUpdateUserViewSchema(request.body)

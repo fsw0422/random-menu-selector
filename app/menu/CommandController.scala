@@ -16,9 +16,8 @@ class CommandController @Inject()(auth: Auth, aggregate: Aggregate)(
 
   def createOrUpdateMenu() =
     Action.async(parse.json) { implicit request =>
-      val password = (request.body \ "password").asOpt[String]
       for {
-        isAuth <- auth.checkPassword(password)
+        isAuth <- auth.checkPassword(request.body)
         result <- {
           if (isAuth) {
             aggregate.createOrUpdateMenu(request.body)
@@ -42,7 +41,7 @@ class CommandController @Inject()(auth: Auth, aggregate: Aggregate)(
     Action.async(parse.json) { implicit request =>
       val password = (request.body \ "password").asOpt[String]
       for {
-        isAuth <- auth.checkPassword(password)
+        isAuth <- auth.checkPassword(request.body)
         result <- {
           if (isAuth) {
             aggregate.createOrUpdateMenuViewSchema(request.body)

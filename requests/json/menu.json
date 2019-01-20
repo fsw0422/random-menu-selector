@@ -3,5 +3,6 @@
   "ingredients": ["", ""],
   "recipe": "",
   "link": "",
-  "selectedCount": 0
+  "selectedCount": 0,
+  "password": ""
 }
