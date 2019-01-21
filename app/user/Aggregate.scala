@@ -2,10 +2,8 @@ package user
 
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
-import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import monocle.macros.GenLens
-import org.joda.time.DateTime
 import play.api.libs.json.{JsValue, Json}
 import event.{Event, EventService, EventType}
 
@@ -40,8 +38,7 @@ class Aggregate @Inject()(eventService: EventService,
     } yield {
       val event = Event(
         `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
-        data = Some(Json.toJson(updatedUserView)),
-        timestamp = DateTime.now
+        data = Some(Json.toJson(updatedUserView))
       )
       eventService.userEventBus offer event
 
@@ -50,11 +47,8 @@ class Aggregate @Inject()(eventService: EventService,
   }
 
   def createOrUpdateUserViewSchema(version: JsValue) = {
-    val event = Event(
-      `type` = EventType.USER_SCHEMA_EVOLVED,
-      data = Some(version),
-      timestamp = DateTime.now
-    )
+    val event =
+      Event(`type` = EventType.USER_SCHEMA_EVOLVED, data = Some(version))
     eventService.userEventBus offer event
   }
 }

@@ -40,10 +40,4 @@ trait PostgresProfile
   }
 }
 
-object PostgresProfile extends PostgresProfile with Dao {
-
-  import PostgresProfile.api._
-
-  // init database
-  db.run(sqlu"""CREATE EXTENSION pgcrypto""")
-}
+object PostgresProfile extends PostgresProfile

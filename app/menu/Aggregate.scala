@@ -5,7 +5,6 @@ import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import com.typesafe.config.Config
 import javax.inject.{Inject, Singleton}
 import monocle.macros.GenLens
-import org.joda.time.DateTime
 import play.api.libs.json.{JsValue, Json}
 import event.{Event, EventService, EventType}
 import user.{UserView, UserViewService}
@@ -51,7 +50,6 @@ class Aggregate @Inject()(config: Config,
       val event = Event(
         `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
         data = Some(Json.toJson(updatedMenuView)),
-        timestamp = DateTime.now
       )
       eventService.menuEventBus offer event
 
@@ -70,15 +68,15 @@ class Aggregate @Inject()(config: Config,
           name = "NONE",
           ingredients = Seq("NONE"),
           recipe = "NONE",
-          link = "",
-          selectedCount = 0
+          link = ""
         )
       }
       updatedRandomMenuView <- menuViewService
         .findByName(randomMenuView.name)
         .map { menuViews =>
           if (menuViews.nonEmpty) {
-            GenLens[MenuView](_.selectedCount).modify(_ + 1)(menuViews.head)
+            GenLens[MenuView](_.selectedCount)
+              .modify(_.map(_ + 1))(menuViews.head)
           } else {
             randomMenuView
           }
@@ -86,8 +84,7 @@ class Aggregate @Inject()(config: Config,
     } yield {
       val event = Event(
         `type` = EventType.RANDOM_MENU_ASKED,
-        data = Some(Json.toJson(updatedRandomMenuView)),
-        timestamp = DateTime.now
+        data = Some(Json.toJson(updatedRandomMenuView))
       )
       eventService.menuEventBus offer event
 
@@ -100,11 +97,8 @@ class Aggregate @Inject()(config: Config,
   }
 
   def createOrUpdateMenuViewSchema(version: JsValue) = {
-    val event = Event(
-      `type` = EventType.MENU_SCHEMA_EVOLVED,
-      data = Some(version),
-      timestamp = DateTime.now
-    )
+    val event =
+      Event(`type` = EventType.MENU_SCHEMA_EVOLVED, data = Some(version))
     eventService.menuEventBus offer event
   }
 

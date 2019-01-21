@@ -48,7 +48,7 @@ class CommandControllerTest
       "SHOULD return ok status with content indicating that the event has been enqueued"
     ) {
       val menuUuid = UUID.fromString("123e4567-e89b-12d3-a456-426655440000")
-      val menuView = MenuView(Some(menuUuid), "", Seq(""), "", "", 0)
+      val menuView = MenuView(Some(menuUuid), "", Seq(""), "", "")
       when(menuViewDaoMock.findAll()).thenReturn(Future(Seq(menuView)))
       when(menuViewDaoMock.findByName(any[String]))
         .thenReturn(Future(Seq(menuView)))

@@ -2,14 +2,11 @@ package user
 
 import java.util.UUID
 
-import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import event.{Event, EventType}
-import utils.db.{Dao, ViewDatabase}
+import utils.db.Dao
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 case class UserView(uuid: Option[UUID] = Some(UUID.randomUUID()),
@@ -22,9 +19,9 @@ object UserView {
     Json.using[Json.WithDefaultValues].format[UserView]
 
   val tableName = "user_view"
-  val uuidName = "uuid"
-  val nameName = "name"
-  val emailName = "email"
+  val uuidColumn = "uuid"
+  val nameColumn = "name"
+  val emailColumn = "email"
 }
 
 @Singleton
@@ -54,9 +51,9 @@ class UserViewDao extends Dao with LazyLogging {
 
   class UserViewTable(tag: Tag)
       extends Table[UserView](tag, UserView.tableName) {
-    def uuid = column[UUID](UserView.uuidName, O.PrimaryKey)
-    def name = column[String](UserView.nameName)
-    def email = column[String](UserView.emailName)
+    def uuid = column[UUID](UserView.uuidColumn, O.PrimaryKey)
+    def name = column[String](UserView.nameColumn)
+    def email = column[String](UserView.emailColumn)
 
     def * =
       (uuid.?, name, email) <> ((UserView.apply _).tupled, UserView.unapply)
@@ -85,11 +82,17 @@ class UserViewDao extends Dao with LazyLogging {
       case "1.0" =>
         db.run(sqlu"""
           CREATE TABLE #${UserView.tableName}(
-            #${UserView.uuidName} UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            #${UserView.nameName} TEXT DEFAULT '' NOT NULL,
-            #${UserView.emailName} TEXT UNIQUE DEFAULT '' NOT NULL
+            #${UserView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            #${UserView.nameColumn} TEXT DEFAULT '' NOT NULL,
+            #${UserView.emailColumn} TEXT UNIQUE DEFAULT '' NOT NULL
           )
         """)
+      case "2.0" =>
+        DBIO.seq(
+          sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.uuidColumn} DROP DEFAULT""",
+          sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.nameColumn} DROP DEFAULT""",
+          sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.emailColumn} DROP DEFAULT"""
+        )
       case _ =>
         logger.error(s"No such versioning defined with $targetVersion")
     }

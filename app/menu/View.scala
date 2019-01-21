@@ -2,14 +2,11 @@ package menu
 
 import java.util.UUID
 
-import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
-import event.{Event, EventType}
-import utils.db.{Dao, ViewDatabase}
+import utils.db.Dao
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 case class MenuView(uuid: Option[UUID] = Some(UUID.randomUUID()),
@@ -17,14 +14,14 @@ case class MenuView(uuid: Option[UUID] = Some(UUID.randomUUID()),
                     ingredients: Seq[String],
                     recipe: String,
                     link: String,
-                    selectedCount: Int)
+                    selectedCount: Option[Int] = Some(0))
 
 object MenuView {
 
   implicit val jsonFormatter =
     Json.using[Json.WithDefaultValues].format[MenuView]
 
-  val tableColumn = "menu_view"
+  val tableName = "menu_view"
   val uuidColumn = "uuid"
   val nameColumn = "name"
   val ingredientsColumn = "ingredients"
@@ -59,7 +56,7 @@ class MenuViewDao extends Dao with LazyLogging {
   import utils.db.PostgresProfile.api._
 
   class MenuViewTable(tag: Tag)
-      extends Table[MenuView](tag, MenuView.tableColumn) {
+      extends Table[MenuView](tag, MenuView.tableName) {
     def uuid = column[UUID](MenuView.uuidColumn, O.PrimaryKey)
     def name = column[String](MenuView.nameColumn)
     def ingredients = column[Seq[String]](MenuView.ingredientsColumn)
@@ -68,7 +65,7 @@ class MenuViewDao extends Dao with LazyLogging {
     def selectedCount = column[Int](MenuView.selectedCountColumn)
 
     def * =
-      (uuid.?, name, ingredients, recipe, link, selectedCount) <> ((MenuView.apply _).tupled, MenuView.unapply)
+      (uuid.?, name, ingredients, recipe, link, selectedCount.?) <> ((MenuView.apply _).tupled, MenuView.unapply)
   }
 
   private val menuViewTable = TableQuery[MenuViewTable]
@@ -93,7 +90,7 @@ class MenuViewDao extends Dao with LazyLogging {
     targetVersion match {
       case "1.0" =>
         db.run(sqlu"""
-          CREATE TABLE #${MenuView.tableColumn}(
+          CREATE TABLE #${MenuView.tableName}(
             #${MenuView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             #${MenuView.nameColumn} TEXT UNIQUE NOT NULL DEFAULT '',
             #${MenuView.ingredientsColumn} TEXT[] NOT NULL DEFAULT '{}',
@@ -102,6 +99,15 @@ class MenuViewDao extends Dao with LazyLogging {
             #${MenuView.selectedCountColumn} INTEGER NOT NULL DEFAULT 0
           )
         """)
+      case "2.0" =>
+        DBIO.seq(
+          sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.uuidColumn} DROP DEFAULT""",
+          sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.ingredientsColumn} DROP DEFAULT""",
+          sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.recipeColumn} DROP DEFAULT""",
+          sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.linkColumn} DROP DEFAULT""",
+          sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.selectedCountColumn} DROP DEFAULT""",
+          sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.nameColumn} DROP DEFAULT"""
+        )
       case _ =>
         logger.error(s"No such versioning defined with $targetVersion")
     }

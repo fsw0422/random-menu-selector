@@ -15,6 +15,9 @@ $(function() {
 
   $('#submit').click(function() {
     var name = $("#name").val();
+    var ingredients = $("#ingredients").val().trim().split(',');
+    var recipe = $("#recipe").val();
+    var link = $("#link").val();
     var password = $("#password").val();
     $.ajax({
         url: '/menu',
@@ -22,6 +25,10 @@ $(function() {
         contentType: 'application/json',
         data: JSON.stringify({
           'name': name,
+          'ingredients': ingredients,
+          'recipe': recipe,
+          'link': link,
+          'selectedCount': 0,
           'password': password
         })
     })

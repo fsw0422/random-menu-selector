@@ -28,9 +28,9 @@ object EventType extends Enumeration {
 }
 
 case class Event(uuid: Option[UUID] = Some(UUID.randomUUID()),
-                 timestamp: DateTime,
-                 `type`: EventType,
-                 data: Option[JsValue])
+                 timestamp: DateTime = DateTime.now(),
+                 `type`: EventType = EventType.UNKNOWN,
+                 data: Option[JsValue] = None)
 
 @Singleton
 class EventService @Inject()(eventDao: EventDao,
