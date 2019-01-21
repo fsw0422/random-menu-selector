@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <title>Random Menu Selector</title>
+
     <!-- CSS -->
     <link rel="stylesheet" href="./stylesheets/lib/bootstrap/bootstrap.min.css">
 
@@ -11,41 +13,58 @@
     <script src="./javascripts/index.js"></script>
   </head>
   <body>
-    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
-      <div class="navbar-collapse collapse w-100 order-1 order-md-0 dual-collapse2">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <div class="collapse navbar-collapse" id="navbarText">
+        <a class="navbar-brand">Random Menu Selector</a>
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item active">
+            <a class="nav-link" href="#">Menu<span class="sr-only">(current)</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">User</a>
+          </li>
+        </ul>
       </div>
-      <div class="mx-auto order-0">
-      </div>
-      <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
-        <form class="form-inline">
-          <input class="form-control mr-sm-2" type="text" placeholder="Search">
-          <button class="btn btn-success ml-auto" type="submit">Search</button>
-        </form>
-      </div>
+      <form class="form-inline">
+        <input type="text" class="form-control mr-sm-2" placeholder="Search" aria-label="Search">
+        <button type="submit" class="btn btn-success my-2 my-sm-0" id="search">Search</button>
+      </form>
     </nav>
     <div class="container">
-      <div class="test">
-        <table class="table table-dark">
-          <thead>
-          <tr>
-            <th>Firstname</th>
-            <th>Lastname</th>
-            <th>Email</th>
-          </tr>
-          </thead>
-          <tbody>
-          </tbody>
-        </table>
-        <div class="form-group">
-          <label for="usr">Name:</label>
-          <input type="text" class="form-control" id="usr">
-        </div>
-        <div class="form-group">
-          <label for="pwd">Password:</label>
-          <input type="password" class="form-control" id="pwd">
-        </div>
-        <button type="button" class="btn btn-primary test">Test</button>
+      <table class="table table-dark">
+        <thead>
+        <tr>
+          <th>Name</th>
+          <th>Ingredients</th>
+          <th>Recipe</th>
+          <th>Link</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+      <hr/>
+      <div class="form-group">
+        <label for="name">Name</label>
+        <input type="text" class="form-control" id="name">
       </div>
+      <div class="form-group">
+        <label for="ingredients">Ingredients</label>
+        <input type="text" class="form-control" id="ingredients">
+      </div>
+      <div class="form-group">
+        <label for="recipe">Recipe</label>
+        <textarea class="form-control" aria-label="Recipe" id="recipe"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="link">Link</label>
+        <input type="text" class="form-control" id="link">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="text" class="form-control" id="password">
+      </div>
+      <button type="button" class="btn btn-primary" id="submit">Submit</button>
     </div>
   </body>
 </html>

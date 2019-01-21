@@ -10,4 +10,5 @@ POST     /user/view                  user.CommandController.createOrUpdateUserVi
 
 # Webpage
 GET      /                           controllers.RedirectController.index()
+GET      /favicon.ico                controllers.Assets.at(path="/public", file="images/favicon.ico")
 GET      /admin/*file                controllers.Assets.at(path="/public", file)
