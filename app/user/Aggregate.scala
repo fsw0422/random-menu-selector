@@ -6,6 +6,9 @@ import javax.inject.{Inject, Singleton}
 import monocle.macros.GenLens
 import play.api.libs.json.{JsValue, Json}
 import event.{Event, EventService, EventType}
+import utils.ResponseMessage
+
+import scala.concurrent.Future
 
 @Singleton
 class Aggregate @Inject()(eventService: EventService,
@@ -50,5 +53,6 @@ class Aggregate @Inject()(eventService: EventService,
     val event =
       Event(`type` = EventType.USER_SCHEMA_EVOLVED, data = Some(version))
     eventService.userEventBus offer event
+    Future(ResponseMessage.DATABASE_EVOLUTION)
   }
 }

@@ -8,7 +8,9 @@ import monocle.macros.GenLens
 import play.api.libs.json.{JsValue, Json}
 import event.{Event, EventService, EventType}
 import user.{UserView, UserViewService}
-import utils.{Email, EmailSender}
+import utils.{Email, EmailSender, ResponseMessage}
+
+import scala.concurrent.Future
 import scala.util.Random
 
 @Singleton
@@ -100,6 +102,7 @@ class Aggregate @Inject()(config: Config,
     val event =
       Event(`type` = EventType.MENU_SCHEMA_EVOLVED, data = Some(version))
     eventService.menuEventBus offer event
+    Future(ResponseMessage.DATABASE_EVOLUTION)
   }
 
   private def sendEmail(menu: MenuView, users: Seq[UserView]) = {

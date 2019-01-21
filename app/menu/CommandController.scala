@@ -39,14 +39,13 @@ class CommandController @Inject()(auth: Auth, aggregate: Aggregate)(
 
   def createOrUpdateMenuViewSchema() =
     Action.async(parse.json) { implicit request =>
-      val password = (request.body \ "password").asOpt[String]
       for {
         isAuth <- auth.checkPassword(request.body)
         result <- {
           if (isAuth) {
             aggregate.createOrUpdateMenuViewSchema(request.body)
           } else {
-            Future(ResponseMessage.DATABASE_EVOLUTION)
+            Future(ResponseMessage.UNAUTHORIZED)
           }
         }
       } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
