@@ -3,7 +3,6 @@ package user
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import javax.inject.{Inject, Singleton}
-import monocle.macros.GenLens
 import play.api.libs.json.{JsValue, Json}
 import event.{Event, EventService, EventType}
 import utils.ResponseMessage
