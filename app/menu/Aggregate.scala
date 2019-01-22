@@ -3,10 +3,9 @@ package menu
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import com.typesafe.config.Config
-import javax.inject.{Inject, Singleton}
-import monocle.macros.GenLens
-import play.api.libs.json.{JsValue, Json}
 import event.{Event, EventService, EventType}
+import javax.inject.{Inject, Singleton}
+import play.api.libs.json.{JsValue, Json}
 import user.{UserView, UserViewService}
 import utils.{Email, EmailSender, ResponseMessage}
 
@@ -75,8 +74,9 @@ class Aggregate @Inject()(config: Config,
         .findByName(randomMenuView.name)
         .map { menuViews =>
           if (menuViews.nonEmpty) {
-            GenLens[MenuView](_.selectedCount)
-              .modify(_.map(_ + 1))(menuViews.head)
+            menuViews.head.copy(
+              selectedCount = randomMenuView.selectedCount.map(_ + 1)
+            )
           } else {
             randomMenuView
           }
