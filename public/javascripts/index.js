@@ -6,7 +6,14 @@ $(function() {
         type: 'get',
     })
     .done(function(response) {
-      console.log(JSON.stringify(response));
+      var menuTable = $('#menu_table > tbody')
+      menuTable.empty()
+      var menus = response.result
+      $.each(menus, function(i, menu) {
+        menuTable.append(
+          '<tr><td>' + menu.name + '</td><td>' + menu.ingredients.join(', ') + "</td><td>" + menu.recipe + "</td><td>" + menu.link + "</td></tr>"
+        )
+      });
     })
     .fail(function(jqXHR, textStatus) {
       console.log(textStatus);

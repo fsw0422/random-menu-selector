@@ -36,14 +36,12 @@ class Aggregate @Inject()(config: Config,
         .findByName(menuView.name)
         .map { menuViews =>
           if (menuViews.nonEmpty) {
-            val lens = GenLens[MenuView]
-            val nameMod = lens(_.name)
-              .modify(name => menuViews.head.name)(menuViews.head)
-            val ingredientMod = lens(_.ingredients)
-              .modify(ingredients => nameMod.ingredients)(nameMod)
-            val recipeMod = lens(_.recipe)
-              .modify(recipe => ingredientMod.recipe)(ingredientMod)
-            lens(_.link).modify(link => recipeMod.link)(recipeMod)
+            menuViews.head.copy(
+              name = menuView.name,
+              ingredients = menuView.ingredients,
+              recipe = menuView.recipe,
+              link = menuView.link
+            )
           } else {
             menuView
           }

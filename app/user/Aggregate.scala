@@ -29,11 +29,8 @@ class Aggregate @Inject()(eventService: EventService,
       updatedUserView <- userViewService
         .findByEmail(userView.email)
         .map { userViews =>
-          val lens = GenLens[UserView]
           if (userViews.nonEmpty) {
-            val nameMod = lens(_.name)
-              .modify(name => userView.name)(userViews.head)
-            lens(_.email).modify(email => nameMod.email)(nameMod)
+            userViews.head.copy(name = userView.name, email = userView.email)
           } else {
             userView
           }
