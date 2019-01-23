@@ -79,6 +79,22 @@ $(function() {
     })
   })
 
+  $('#random').click(function() {
+    $.ajax({
+        url: '/menu/random',
+        type: 'post',
+        contentType: 'application/json',
+        data: JSON.stringify({})
+    })
+    .done(function(response) {
+      var uuid = response.result
+      alert("Random menu [" + uuid + "] has been sent!")
+    })
+    .fail(function(jqXHR, textStatus) {
+      alert("Random select failure")
+    })
+  })
+
   function searchMenu() {
     $.ajax({
         url: '/menu/view',
@@ -96,7 +112,7 @@ $(function() {
       })
     })
     .fail(function(jqXHR, textStatus) {
-      console.log(textStatus)
+      alert(textStatus)
     })
   }
 
