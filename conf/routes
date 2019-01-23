@@ -1,6 +1,6 @@
 # Menu
 POST     /menu                       menu.CommandController.createOrUpdateMenu()
-DELETE   /menu                  menu.CommandController.deleteMenu()
+DELETE   /menu                       menu.CommandController.deleteMenu()
 POST     /menu/random                menu.CommandController.selectRandomMenu()
 
 POST     /menu/view                  menu.CommandController.createOrUpdateMenuViewSchema()
@@ -14,8 +14,3 @@ DELETE   /user                       user.CommandController.deleteUser()
 POST     /user/view                  user.CommandController.createOrUpdateUserViewSchema()
 
 GET      /user/view                  user.QueryController.getAllUsers()
-
-# Webpage
-GET      /                           controllers.RedirectController.index()
-GET      /favicon.ico                controllers.Assets.at(path="/public", file="images/favicon.ico")
-GET      /admin/*file                controllers.Assets.at(path="/public", file)
