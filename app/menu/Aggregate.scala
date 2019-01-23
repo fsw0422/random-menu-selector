@@ -150,8 +150,7 @@ class Aggregate @Inject()(config: Config,
 
             <b>Recipe</b>
             <p>
-          ${menu.recipe
-          .foldLeft[String]("")((s, instruction) => s + "<br>" + instruction)}
+          ${menu.recipe}
             </p>
             <br>
 
