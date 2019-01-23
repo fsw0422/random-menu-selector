@@ -23,9 +23,6 @@ libraryDependencies ++= Seq(
   "com.github.tminglei" %% "slick-pg_joda-time" % slickPgVersion,
   "com.github.tminglei" %% "slick-pg_play-json" % slickPgVersion,
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
-  "com.github.julien-truffaut" %% "monocle-core" % monocleVersion,
-  "com.github.julien-truffaut" %% "monocle-macro" % monocleVersion,
-  "com.github.julien-truffaut" %% "monocle-law" % monocleVersion % Test,
   "org.scalatest" %% "scalatest" % "3.0.5" % Test,
   "org.mockito" %% "mockito-scala" % "1.0.0-beta.7" % Test
 )

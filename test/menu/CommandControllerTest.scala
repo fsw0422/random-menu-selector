@@ -19,7 +19,7 @@ import utils.EmailSender
 import scala.concurrent.Future
 
 @RunWith(classOf[JUnitRunner])
-class ControllerTest
+class CommandControllerTest
     extends FunSpec
     with MockitoSugar
     with ArgumentMatchersSugar
@@ -45,10 +45,10 @@ class ControllerTest
        WHEN POST request to /menu/random"
   """) {
     it(
-      "SHOULD return ok status with content indicating that the event has been enqueued"
+      "SHOULD return ok status with the selected menu's UUID"
     ) {
       val menuUuid = UUID.fromString("123e4567-e89b-12d3-a456-426655440000")
-      val menuView = MenuView(Some(menuUuid), "", Seq(""), "", "", 0)
+      val menuView = MenuView(Some(menuUuid), "", Seq(""), "", "")
       when(menuViewDaoMock.findAll()).thenReturn(Future(Seq(menuView)))
       when(menuViewDaoMock.findByName(any[String]))
         .thenReturn(Future(Seq(menuView)))
@@ -69,7 +69,7 @@ class ControllerTest
       assert(responseStatus == OK)
 
       val responseContent = contentAsJson(response)
-      val uuid = (responseContent \ "uuid").as[String]
+      val uuid = (responseContent \ "result").as[String]
       assert(uuid == "123e4567-e89b-12d3-a456-426655440000")
     }
   }

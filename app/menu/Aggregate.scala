@@ -1,15 +1,17 @@
 package menu
 
+import java.util.UUID
+
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import com.typesafe.config.Config
-import javax.inject.{Inject, Singleton}
-import monocle.macros.GenLens
-import org.joda.time.DateTime
-import play.api.libs.json.{JsValue, Json}
 import event.{Event, EventService, EventType}
+import javax.inject.{Inject, Singleton}
+import play.api.libs.json.{JsValue, Json}
 import user.{UserView, UserViewService}
-import utils.{Email, EmailSender}
+import utils.{Email, EmailSender, ResponseMessage}
+
+import scala.concurrent.Future
 import scala.util.Random
 
 @Singleton
@@ -35,14 +37,12 @@ class Aggregate @Inject()(config: Config,
         .findByName(menuView.name)
         .map { menuViews =>
           if (menuViews.nonEmpty) {
-            val lens = GenLens[MenuView]
-            val nameMod = lens(_.name)
-              .modify(name => menuViews.head.name)(menuViews.head)
-            val ingredientMod = lens(_.ingredients)
-              .modify(ingredients => nameMod.ingredients)(nameMod)
-            val recipeMod = lens(_.recipe)
-              .modify(recipe => ingredientMod.recipe)(ingredientMod)
-            lens(_.link).modify(link => recipeMod.link)(recipeMod)
+            menuViews.head.copy(
+              name = menuView.name,
+              ingredients = menuView.ingredients,
+              recipe = menuView.recipe,
+              link = menuView.link
+            )
           } else {
             menuView
           }
@@ -51,11 +51,28 @@ class Aggregate @Inject()(config: Config,
       val event = Event(
         `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
         data = Some(Json.toJson(updatedMenuView)),
-        timestamp = DateTime.now
       )
       eventService.menuEventBus offer event
 
       updatedMenuView.uuid.get
+    }
+  }
+
+  def deleteMenu(menu: JsValue) = {
+    val menuUuidOption = (menu \ "uuid").asOpt[String]
+    if (menuUuidOption.isEmpty) {
+      Future(ResponseMessage.NO_SUCH_IDENTITY)
+    } else {
+      val menuUuid = UUID.fromString(menuUuidOption.get)
+      menuViewService.delete(menuUuid)
+
+      val event = Event(
+        `type` = EventType.MENU_PROFILE_DELETED,
+        data = Some(Json.toJson(menuUuid)),
+      )
+      eventService.menuEventBus offer event
+
+      Future(menuUuid)
     }
   }
 
@@ -70,15 +87,16 @@ class Aggregate @Inject()(config: Config,
           name = "NONE",
           ingredients = Seq("NONE"),
           recipe = "NONE",
-          link = "",
-          selectedCount = 0
+          link = ""
         )
       }
       updatedRandomMenuView <- menuViewService
         .findByName(randomMenuView.name)
         .map { menuViews =>
           if (menuViews.nonEmpty) {
-            GenLens[MenuView](_.selectedCount).modify(_ + 1)(menuViews.head)
+            menuViews.head.copy(
+              selectedCount = randomMenuView.selectedCount.map(_ + 1)
+            )
           } else {
             randomMenuView
           }
@@ -86,8 +104,7 @@ class Aggregate @Inject()(config: Config,
     } yield {
       val event = Event(
         `type` = EventType.RANDOM_MENU_ASKED,
-        data = Some(Json.toJson(updatedRandomMenuView)),
-        timestamp = DateTime.now
+        data = Some(Json.toJson(updatedRandomMenuView))
       )
       eventService.menuEventBus offer event
 
@@ -100,12 +117,10 @@ class Aggregate @Inject()(config: Config,
   }
 
   def createOrUpdateMenuViewSchema(version: JsValue) = {
-    val event = Event(
-      `type` = EventType.MENU_SCHEMA_EVOLVED,
-      data = Some(version),
-      timestamp = DateTime.now
-    )
+    val event =
+      Event(`type` = EventType.MENU_SCHEMA_EVOLVED, data = Some(version))
     eventService.menuEventBus offer event
+    Future(ResponseMessage.DATABASE_EVOLUTION)
   }
 
   private def sendEmail(menu: MenuView, users: Seq[UserView]) = {
