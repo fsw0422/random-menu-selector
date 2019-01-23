@@ -28,6 +28,20 @@ class CommandController @Inject()(auth: Auth, aggregate: Aggregate)(
       } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
     }
 
+  def deleteMenu() =
+    Action.async(parse.json) { implicit request =>
+      for {
+        isAuth <- auth.checkPassword(request.body)
+        result <- {
+          if (isAuth) {
+            aggregate.deleteMenu(request.body)
+          } else {
+            Future(ResponseMessage.UNAUTHORIZED)
+          }
+        }
+      } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
+    }
+
   def selectRandomMenu() =
     Action.async(parse.json) { implicit request =>
       aggregate

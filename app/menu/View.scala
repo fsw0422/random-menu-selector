@@ -45,6 +45,10 @@ class MenuViewService @Inject()(menuViewDao: MenuViewDao) extends LazyLogging {
     menuViewDao.findAll()
   }
 
+  def delete(uuid: UUID) = {
+    menuViewDao.delete(uuid)
+  }
+
   def evolve(targetVersion: String) = {
     menuViewDao.evolve(targetVersion)
   }
@@ -84,6 +88,14 @@ class MenuViewDao extends Dao with LazyLogging {
 
   def findAll(): Future[Seq[MenuView]] = {
     db.run(menuViewTable.result)
+  }
+
+  def delete(uuid: UUID) = {
+    db.run(
+      menuViewTable
+        .filter(menuView => menuView.uuid === uuid)
+        .delete
+    )
   }
 
   def evolve(targetVersion: String) = {

@@ -39,6 +39,10 @@ class UserViewService @Inject()(userViewDao: UserViewDao) extends LazyLogging {
     userViewDao.findAll()
   }
 
+  def delete(uuid: UUID) = {
+    userViewDao.delete(uuid)
+  }
+
   def evolve(targetVersion: String) = {
     userViewDao.evolve(targetVersion)
   }
@@ -75,6 +79,14 @@ class UserViewDao extends Dao with LazyLogging {
 
   def findAll(): Future[Seq[UserView]] = {
     db.run(userViewTable.result)
+  }
+
+  def delete(uuid: UUID) = {
+    db.run(
+      userViewTable
+        .filter(menuView => menuView.uuid === uuid)
+        .delete
+    )
   }
 
   def evolve(targetVersion: String) = {

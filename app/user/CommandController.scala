@@ -28,6 +28,20 @@ class CommandController @Inject()(auth: Auth, aggregate: Aggregate)(
       } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
     }
 
+  def deleteUser() =
+    Action.async(parse.json) { implicit request =>
+      for {
+        isAuth <- auth.checkPassword(request.body)
+        result <- {
+          if (isAuth) {
+            aggregate.deleteUser(request.body)
+          } else {
+            Future(ResponseMessage.UNAUTHORIZED)
+          }
+        }
+      } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
+    }
+
   def createOrUpdateUserViewSchema() =
     Action.async(parse.json) { implicit request =>
       for {

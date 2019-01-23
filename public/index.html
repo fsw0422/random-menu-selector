@@ -24,9 +24,6 @@
       <li class="nav-item active">
         <a class="nav-link" href="#">Menu<span class="sr-only">(current)</span></a>
       </li>
-      <li class="nav-item">
-        <a class="nav-link" href="#">User</a>
-      </li>
     </ul>
   </div>
   <form class="form-inline">
@@ -38,6 +35,7 @@
   <table class="table table-light" id="menu_table">
     <thead>
     <tr>
+      <th>UUID</th>
       <th>Name</th>
       <th>Ingredients</th>
       <th>Recipe</th>
@@ -45,10 +43,13 @@
     </tr>
     </thead>
     <tbody>
-
     </tbody>
   </table>
   <hr/>
+  <div class="form-group">
+    <label for="uuid">UUID (optional)</label>
+    <input type="text" class="form-control" id="uuid">
+  </div>
   <div class="form-group">
     <label for="name">Name</label>
     <input type="text" class="form-control" id="name">
@@ -69,7 +70,8 @@
     <label for="password">Password</label>
     <input type="text" class="form-control" id="password">
   </div>
-  <button type="button" class="btn btn-primary" id="submit">Submit</button>
+  <button type="button" class="btn btn-success" id="submit">Submit</button>
+  <button type="button" class="btn btn-danger" id="delete">Delete</button>
 </div>
 </body>
 </html>

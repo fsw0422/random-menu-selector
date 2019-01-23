@@ -1,10 +1,12 @@
 package user
 
+import java.util.UUID
+
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import event.{Event, EventService, EventType}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json}
-import event.{Event, EventService, EventType}
 import utils.ResponseMessage
 
 import scala.concurrent.Future
@@ -42,6 +44,24 @@ class Aggregate @Inject()(eventService: EventService,
       eventService.userEventBus offer event
 
       updatedUserView.uuid.get
+    }
+  }
+
+  def deleteUser(user: JsValue) = {
+    val userUuidOption = (user \ "uuid").asOpt[String]
+    if (userUuidOption.isEmpty) {
+      Future(ResponseMessage.NO_SUCH_IDENTITY)
+    } else {
+      val userUuid = UUID.fromString(userUuidOption.get)
+      userViewService.delete(userUuid)
+
+      val event = Event(
+        `type` = EventType.USER_PROFILE_DELETED,
+        data = Some(Json.toJson(userUuid)),
+      )
+      eventService.userEventBus offer event
+
+      Future(userUuid)
     }
   }
 

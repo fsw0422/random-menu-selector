@@ -23,7 +23,8 @@ import scala.concurrent.Future
 object EventType extends Enumeration {
   type EventType = Value
   val UNKNOWN, RANDOM_MENU_ASKED, MENU_PROFILE_CREATED_OR_UPDATED,
-  MENU_SCHEMA_EVOLVED, USER_PROFILE_CREATED_OR_UPDATED, USER_SCHEMA_EVOLVED =
+  MENU_PROFILE_DELETED, MENU_SCHEMA_EVOLVED, USER_PROFILE_CREATED_OR_UPDATED,
+  USER_PROFILE_DELETED, USER_SCHEMA_EVOLVED =
     Value
 }
 
@@ -52,7 +53,7 @@ class EventService @Inject()(eventDao: EventDao,
     event.`type` match {
       case EventType.RANDOM_MENU_ASKED |
           EventType.MENU_PROFILE_CREATED_OR_UPDATED |
-          EventType.MENU_SCHEMA_EVOLVED =>
+          EventType.MENU_PROFILE_DELETED | EventType.MENU_SCHEMA_EVOLVED =>
         eventDao.insert(event)
       case _ =>
         logger.error(s"No such event type [${event.`type`}]")
@@ -63,6 +64,8 @@ class EventService @Inject()(eventDao: EventDao,
       case EventType.RANDOM_MENU_ASKED |
           EventType.MENU_PROFILE_CREATED_OR_UPDATED =>
         menuViewService.upsert(event.data.get.as[MenuView])
+      case EventType.MENU_PROFILE_DELETED =>
+        menuViewService.delete(event.data.get.as[UUID])
       case EventType.MENU_SCHEMA_EVOLVED =>
         viewDatabase.viewVersionNonExistAction(event)(
           targetVersion => menuViewService.evolve(targetVersion)
@@ -75,7 +78,7 @@ class EventService @Inject()(eventDao: EventDao,
   val userEventBus = eventStream(5) { event =>
     event.`type` match {
       case EventType.USER_PROFILE_CREATED_OR_UPDATED |
-          EventType.USER_SCHEMA_EVOLVED =>
+          EventType.USER_PROFILE_DELETED | EventType.USER_SCHEMA_EVOLVED =>
         eventDao.insert(event)
       case _ =>
         logger.error(s"No such event type [${event.`type`}]")
@@ -85,6 +88,8 @@ class EventService @Inject()(eventDao: EventDao,
     event.`type` match {
       case EventType.USER_PROFILE_CREATED_OR_UPDATED =>
         userViewService.upsert(event.data.get.as[UserView])
+      case EventType.USER_PROFILE_DELETED =>
+        userViewService.delete(event.data.get.as[UUID])
       case EventType.USER_SCHEMA_EVOLVED =>
         viewDatabase.viewVersionNonExistAction(event)(
           targetVersion => userViewService.evolve(targetVersion)

@@ -1,5 +1,7 @@
 package menu
 
+import java.util.UUID
+
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import com.typesafe.config.Config
@@ -53,6 +55,24 @@ class Aggregate @Inject()(config: Config,
       eventService.menuEventBus offer event
 
       updatedMenuView.uuid.get
+    }
+  }
+
+  def deleteMenu(menu: JsValue) = {
+    val menuUuidOption = (menu \ "uuid").asOpt[String]
+    if (menuUuidOption.isEmpty) {
+      Future(ResponseMessage.NO_SUCH_IDENTITY)
+    } else {
+      val menuUuid = UUID.fromString(menuUuidOption.get)
+      menuViewService.delete(menuUuid)
+
+      val event = Event(
+        `type` = EventType.MENU_PROFILE_DELETED,
+        data = Some(Json.toJson(menuUuid)),
+      )
+      eventService.menuEventBus offer event
+
+      Future(menuUuid)
     }
   }
 

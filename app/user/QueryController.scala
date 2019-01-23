@@ -12,7 +12,7 @@ class QueryController @Inject()(userViewService: UserViewService)(
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
 
-  def getAllMenus() =
+  def getAllUsers() =
     Action.async { implicit request =>
       userViewService
         .findAll()
