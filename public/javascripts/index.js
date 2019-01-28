@@ -1,19 +1,16 @@
 $(function() {
 
-  var menuSearchState ={}
+  var menuSearchState = {}
 
   $("#menu_table tbody").on("click", "tr", function(e) {
     var uuid = $(this).find('td:eq(0)').text()
-    var name = $(this).find('td:eq(1)').text()
-    var ingredients = $(this).find('td:eq(2)').text()
-    var recipe = $(this).find('td:eq(3)').text()
-    var link = $(this).find('td:eq(4)').text()
+    var menu = menuSearchState[uuid]
 
     $("#uuid").val(uuid)
-    $("#name").val(name)
-    $("#ingredients").val(ingredients)
-    $("#recipe").val(recipe)
-    $("#link").val(link)
+    $("#name").val(menu.name)
+    $("#ingredients").val(menu.ingredients)
+    $("#recipe").val(menu.recipe)
+    $("#link").val(menu.link)
   })
 
   $('#search').click(function() {
