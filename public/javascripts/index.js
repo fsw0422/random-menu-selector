@@ -104,7 +104,7 @@ $(function() {
       $.each(menus, function(i, menu) {
         menuSearchState[menu.uuid] = menu
         menuTableBody.append(
-          '<tr><td uuid>' + menu.uuid + '</td><td>' + menu.name + '</td><td>' + menu.ingredients.join(', ') + "</td><td>" + menu.recipe + "</td><td>" + menu.link + "</td></tr>"
+          '<tr><td uuid>' + menu.uuid + '</td><td>' + menu.name + '</td><td>' + menu.ingredients.join(', ') + "</td><td>" + menu.recipe + "</td><td><a href=\"" + menu.link + "\">" + menu.link + "</a></td></tr>"
         )
       })
     })
