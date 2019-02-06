@@ -18,8 +18,9 @@ case class MenuView(uuid: Option[UUID] = Some(UUID.randomUUID()),
 
 object MenuView {
 
-  implicit val jsonFormatter =
-    Json.using[Json.WithDefaultValues].format[MenuView]
+  implicit val jsonFormatter = Json
+    .using[Json.WithDefaultValues]
+    .format[MenuView]
 
   val tableName = "menu_view"
   val uuidColumn = "uuid"

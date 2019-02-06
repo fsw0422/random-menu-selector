@@ -15,8 +15,9 @@ case class UserView(uuid: Option[UUID] = Some(UUID.randomUUID()),
 
 object UserView {
 
-  implicit val jsonFormat =
-    Json.using[Json.WithDefaultValues].format[UserView]
+  implicit val jsonFormat = Json
+    .using[Json.WithDefaultValues]
+    .format[UserView]
 
   val tableName = "user_view"
   val uuidColumn = "uuid"

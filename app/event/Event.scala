@@ -3,18 +3,14 @@ package event
 import java.util.UUID
 
 import akka.actor.ActorSystem
-import akka.stream.{
-  ActorMaterializer,
-  ActorMaterializerSettings,
-  OverflowStrategy
-}
 import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
 import com.typesafe.scalalogging.LazyLogging
+import event.EventType.EventType
 import javax.inject.{Inject, Singleton}
+import menu.{MenuView, MenuViewService}
 import org.joda.time.DateTime
 import play.api.libs.json.JsValue
-import event.EventType.EventType
-import menu.{MenuView, MenuViewService}
 import user.{UserView, UserViewService}
 import utils.db.{Dao, ViewDatabase}
 

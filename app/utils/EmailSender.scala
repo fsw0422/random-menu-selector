@@ -1,6 +1,7 @@
 package utils
 
 import java.util.{Date, Properties}
+
 import javax.inject.Singleton
 import javax.mail.internet.{InternetAddress, MimeMessage}
 import javax.mail.{Address, Message, Session}
