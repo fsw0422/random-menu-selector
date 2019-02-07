@@ -137,9 +137,14 @@ class Aggregate @Inject()(config: Config,
         message = s"""
         <html>
           <head>
-            <title>Today's Menu</title>
           </head>
           <body>
+
+            <b>Menu</b>
+            <p>
+          ${menu.name}
+            </p>
+            <br>
 
             <b>Ingredients</b>
             <p>
