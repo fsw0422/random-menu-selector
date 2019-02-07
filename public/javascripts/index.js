@@ -14,7 +14,8 @@ $(function() {
   })
 
   $('#search').click(function() {
-    searchMenu()
+    var search = $("#searchForm").val()
+    searchMenu(search)
   })
 
   $('#submit').click(function() {
@@ -24,17 +25,17 @@ $(function() {
     var link = $("#link").val()
     var password = $("#password").val()
     $.ajax({
-        url: '/menu',
-        type: 'post',
-        contentType: 'application/json',
-        data: JSON.stringify({
-          'name': name,
-          'ingredients': ingredients,
-          'recipe': recipe,
-          'link': link,
-          'selectedCount': 0,
-          'password': password
-        })
+      url: '/menu',
+      type: 'post',
+      contentType: 'application/json',
+      data: JSON.stringify({
+        'name': name,
+        'ingredients': ingredients,
+        'recipe': recipe,
+        'link': link,
+        'selectedCount': 0,
+        'password': password
+      })
     })
     .done(function(response) {
       var result = response.result
@@ -43,7 +44,9 @@ $(function() {
       } else {
         alert("Your Menu has been created (updated) successfully!")
       }
-      searchMenu()
+
+      var menuTableBody = $('#menu_table > tbody')
+      menuTableBody.empty()
     })
     .fail(function(jqXHR, textStatus) {
       alert("Menu create (update) failed")
@@ -54,13 +57,13 @@ $(function() {
     var uuid = $("#uuid").val()
     var password = $("#password").val()
     $.ajax({
-        url: '/menu',
-        type: 'delete',
-        contentType: 'application/json',
-        data: JSON.stringify({
-          'uuid': uuid,
-          'password': password
-        })
+      url: '/menu',
+      type: 'delete',
+      contentType: 'application/json',
+      data: JSON.stringify({
+        'uuid': uuid,
+        'password': password
+      })
     })
     .done(function(response) {
       var result = response.result
@@ -69,7 +72,9 @@ $(function() {
       } else {
         alert("Your Menu has been deleted successfully!")
       }
-      searchMenu()
+
+      var menuTableBody = $('#menu_table > tbody')
+      menuTableBody.empty()
     })
     .fail(function(jqXHR, textStatus) {
       alert("Menu delete failed")
@@ -78,10 +83,10 @@ $(function() {
 
   $('#random').click(function() {
     $.ajax({
-        url: '/menu/random',
-        type: 'post',
-        contentType: 'application/json',
-        data: JSON.stringify({})
+      url: '/menu/random',
+      type: 'post',
+      contentType: 'application/json',
+      data: JSON.stringify({})
     })
     .done(function(response) {
       var uuid = response.result
@@ -92,10 +97,13 @@ $(function() {
     })
   })
 
-  function searchMenu() {
+  function searchMenu(menuName) {
     $.ajax({
-        url: '/menu/view',
-        type: 'get',
+      url: '/menu/view',
+      type: 'get',
+      data: {
+        name: menuName,
+      }
     })
     .done(function(response) {
       var menuTableBody = $('#menu_table > tbody')
