@@ -42,6 +42,10 @@ class MenuViewService @Inject()(menuViewDao: MenuViewDao) extends LazyLogging {
     menuViewDao.findByName(name)
   }
 
+  def findByNameLike(name: String): Future[Seq[MenuView]] = {
+    menuViewDao.findByNameLike(name)
+  }
+
   def findAll(): Future[Seq[MenuView]] = {
     menuViewDao.findAll()
   }
@@ -83,6 +87,14 @@ class MenuViewDao extends Dao with LazyLogging {
     db.run(
       menuViewTable
         .filter(menuView => menuView.name === name)
+        .result
+    )
+  }
+
+  def findByNameLike(name: String): Future[Seq[MenuView]] = {
+    db.run(
+      menuViewTable
+        .filter(menuView => menuView.name like "%" + name + "%")
         .result
     )
   }

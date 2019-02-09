@@ -42,7 +42,7 @@ class CommandControllerTest
   describe("""
        GIVEN 2 menus
          AND an user
-       WHEN POST request to /menu/random"
+       WHEN POST request to /menu/random
   """) {
     it("SHOULD return ok status with either menu's UUID") {
       val applePieUuid = UUID
@@ -64,25 +64,18 @@ class CommandControllerTest
         "boil pear",
         "pearLink"
       )
-      when(
-        menuViewDaoMock
-          .findAll()
-      ).thenReturn(Future(Seq(applePieView, pearPieView)))
+      when(menuViewDaoMock.findAll())
+      .thenReturn(Future(Seq(applePieView, pearPieView)))
       when(menuViewDaoMock.findByName(any[String]))
-        .thenReturn(Future(Seq(applePieView)))
+      .thenReturn(Future(Seq(applePieView)))
 
       val userUuid = UUID
       .fromString("124e4567-e89b-12d3-a456-426655440000")
       val userView = UserView(Some(userUuid), "james", "james@email.com")
-      when(
-      userViewDaoMock
-        .findAll()
-    ).thenReturn(Future(Seq(userView)))
-      when(
-      userViewDaoMock
-        .findByEmail(any[String])
-    )
-        .thenReturn(Future(Seq(userView)))
+      when(userViewDaoMock.findAll())
+      .thenReturn(Future(Seq(userView)))
+      when(userViewDaoMock.findByEmail(any[String]))
+      .thenReturn(Future(Seq(userView)))
 
       val Some(response) = route(
         mockedApp,
@@ -96,9 +89,9 @@ class CommandControllerTest
       val responseContent = contentAsJson(response)
       val uuid = (responseContent \ "result").as[String]
       assert(
-      uuid == "123e4567-e89b-12d3-a456-426655440000" ||
+        uuid == "123e4567-e89b-12d3-a456-426655440000" ||
         uuid == "223e4567-e89b-12d3-a456-426655440000"
-    )
+      )
     }
   }
 }

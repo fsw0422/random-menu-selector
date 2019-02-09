@@ -5,7 +5,7 @@ POST     /menu/random                menu.CommandController.selectRandomMenu()
 
 POST     /menu/view                  menu.CommandController.createOrUpdateMenuViewSchema()
 
-GET      /menu/view                  menu.QueryController.getAllMenus()
+GET      /menu/view                  menu.QueryController.getMenusByNameLike(name: String)
 
 # User
 POST     /user                       user.CommandController.createOrUpdateUser()
