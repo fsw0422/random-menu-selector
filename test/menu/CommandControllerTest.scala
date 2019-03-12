@@ -84,11 +84,11 @@ class CommandControllerTest
         .withJsonBody(Json.parse("{}"))
     )
 
-    Then("should return status of ok")
+    Then("return status of ok")
     val responseStatus = status(response)
     responseStatus should equal(OK)
 
-    And("should return either apple pie or pear pie")
+    And("return either apple pie or pear pie")
     val responseContent = contentAsJson(response)
     val uuid = (responseContent \ "result").as[String]
     uuid should (equal("123e4567-e89b-12d3-a456-426655440000") or equal("223e4567-e89b-12d3-a456-426655440000"))
