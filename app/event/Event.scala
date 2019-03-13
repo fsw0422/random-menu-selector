@@ -59,9 +59,15 @@ class EventService @Inject()(eventDao: EventDao,
     event.`type` match {
       case EventType.RANDOM_MENU_ASKED |
           EventType.MENU_PROFILE_CREATED_OR_UPDATED =>
-        menuViewService.upsert(event.data.get.as[MenuView])
+        event.data
+        .fold(logger.warn(s"[$event] is null")) { menuViewJson =>
+          menuViewService.upsert(menuViewJson.as[MenuView])
+        }
       case EventType.MENU_PROFILE_DELETED =>
-        menuViewService.delete(event.data.get.as[UUID])
+        event.data
+        .fold(logger.warn(s"[$event] is null")) { menuUuidJson =>
+          menuViewService.delete(menuUuidJson.as[UUID])
+        }
       case EventType.MENU_SCHEMA_EVOLVED =>
         viewDatabase.viewVersionNonExistAction(event)(
           targetVersion => menuViewService.evolve(targetVersion)
@@ -83,9 +89,15 @@ class EventService @Inject()(eventDao: EventDao,
   } { event =>
     event.`type` match {
       case EventType.USER_PROFILE_CREATED_OR_UPDATED =>
-        userViewService.upsert(event.data.get.as[UserView])
+        event.data
+        .fold(logger.warn(s"[$event] is null")) { menuViewJson =>
+          userViewService.upsert(menuViewJson.as[UserView])
+        }
       case EventType.USER_PROFILE_DELETED =>
-        userViewService.delete(event.data.get.as[UUID])
+        event.data
+        .fold(logger.warn(s"[$event] is null")) { menuUuidJson =>
+          menuViewService.delete(menuUuidJson.as[UUID])
+        }
       case EventType.USER_SCHEMA_EVOLVED =>
         viewDatabase.viewVersionNonExistAction(event)(
           targetVersion => userViewService.evolve(targetVersion)

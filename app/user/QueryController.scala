@@ -2,7 +2,7 @@ package user
 
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import play.api.mvc.{AbstractController, ControllerComponents}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 
 import scala.concurrent.ExecutionContext
 
@@ -12,12 +12,11 @@ class QueryController @Inject()(userViewService: UserViewService)(
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
 
-  def getAllUsers() =
+  def getAllUsers(): Action[AnyContent] =
     Action.async { implicit request =>
-      userViewService
-        .findAll()
-        .map { userViews =>
-          Ok(Json.obj("result" -> Json.toJson(userViews)))
-        }
+      userViewService.findAll()
+      .map { userViews =>
+        Ok(Json.obj("result" -> Json.toJson(userViews)))
+      }
     }
 }

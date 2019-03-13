@@ -24,18 +24,16 @@ class Aggregate @Inject()(eventService: EventService,
     actorMaterializerSettings
   )
 
-  def createOrUpdateUser(user: JsValue) = {
+  def createOrUpdateUser(user: JsValue) : Future[Option[UUID]] = {
     val userView = user.as[UserView]
     for {
-      updatedUserView <- userViewService
-        .findByEmail(userView.email)
-        .map { userViews =>
-          if (userViews.nonEmpty) {
-            userViews.head.copy(name = userView.name, email = userView.email)
-          } else {
-            userView
-          }
+      updatedUserView <- userViewService.findByEmail(userView.email)
+      .map { userViews =>
+        userViews.headOption
+        .fold(userView) { head =>
+          head.copy(name = userView.name, email = userView.email)
         }
+      }
     } yield {
       val event = Event(
         `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
@@ -43,16 +41,15 @@ class Aggregate @Inject()(eventService: EventService,
       )
       eventService.userEventBus offer event
 
-      updatedUserView.uuid.get
+      updatedUserView.uuid
     }
   }
 
-  def deleteUser(user: JsValue) = {
+  def deleteUser(user: JsValue): String = {
     val userUuidOption = (user \ "uuid").asOpt[String]
-    if (userUuidOption.isEmpty) {
-      Future(ResponseMessage.NO_SUCH_IDENTITY)
-    } else {
-      val userUuid = UUID.fromString(userUuidOption.get)
+    userUuidOption
+    .fold(ResponseMessage.NO_SUCH_IDENTITY) { userUuidString =>
+      val userUuid = UUID.fromString(userUuidString)
       userViewService.delete(userUuid)
 
       val event = Event(
@@ -61,14 +58,13 @@ class Aggregate @Inject()(eventService: EventService,
       )
       eventService.userEventBus offer event
 
-      Future(userUuid)
+      userUuidString
     }
   }
 
-  def createOrUpdateUserViewSchema(version: JsValue) = {
-    val event =
-      Event(`type` = EventType.USER_SCHEMA_EVOLVED, data = Some(version))
+  def createOrUpdateUserViewSchema(version: JsValue): String = {
+    val event = Event(`type` = EventType.USER_SCHEMA_EVOLVED, data = Some(version))
     eventService.userEventBus offer event
-    Future(ResponseMessage.DATABASE_EVOLUTION)
+    ResponseMessage.DATABASE_EVOLUTION
   }
 }

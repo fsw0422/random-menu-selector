@@ -30,21 +30,19 @@ class Aggregate @Inject()(config: Config,
     actorMaterializerSettings
   )
 
-  def createOrUpdateMenu(menu: JsValue) = {
+  def createOrUpdateMenu(menu: JsValue): Future[Option[UUID]] = {
     val menuView = menu.as[MenuView]
     for {
-      updatedMenuView <- menuViewService
-        .findByName(menuView.name)
+      updatedMenuView <- menuViewService.findByName(menuView.name)
         .map { menuViews =>
-          if (menuViews.nonEmpty) {
-            menuViews.head.copy(
+          menuViews.headOption
+          .fold(menuView) { menuView =>
+            menuView.copy(
               name = menuView.name,
               ingredients = menuView.ingredients,
               recipe = menuView.recipe,
               link = menuView.link
             )
-          } else {
-            menuView
           }
         }
     } yield {
@@ -54,16 +52,15 @@ class Aggregate @Inject()(config: Config,
       )
       eventService.menuEventBus offer event
 
-      updatedMenuView.uuid.get
+      updatedMenuView.uuid
     }
   }
 
-  def deleteMenu(menu: JsValue) = {
+  def deleteMenu(menu: JsValue): String = {
     val menuUuidOption = (menu \ "uuid").asOpt[String]
-    if (menuUuidOption.isEmpty) {
-      Future(ResponseMessage.NO_SUCH_IDENTITY)
-    } else {
-      val menuUuid = UUID.fromString(menuUuidOption.get)
+    menuUuidOption
+    .fold(ResponseMessage.NO_SUCH_IDENTITY) { menuUuidString =>
+      val menuUuid = UUID.fromString(menuUuidString)
       menuViewService.delete(menuUuid)
 
       val event = Event(
@@ -72,35 +69,29 @@ class Aggregate @Inject()(config: Config,
       )
       eventService.menuEventBus offer event
 
-      Future(menuUuid)
+      menuUuidString
     }
   }
 
-  def selectRandomMenu() = {
+  def selectRandomMenu(): Future[Option[UUID]] = {
     for {
       menuViews <- menuViewService.findAll()
       userViews <- userViewService.findAll()
-      randomMenuView = if (menuViews.nonEmpty) {
-        Random.shuffle(menuViews).head
-      } else {
-        MenuView(
-          name = "NONE",
-          ingredients = Seq("NONE"),
-          recipe = "NONE",
-          link = ""
-        )
-      }
-      updatedRandomMenuView <- menuViewService
-        .findByName(randomMenuView.name)
-        .map { menuViews =>
-          if (menuViews.nonEmpty) {
-            menuViews.head.copy(
-              selectedCount = randomMenuView.selectedCount.map(_ + 1)
-            )
-          } else {
-            randomMenuView
-          }
+      randomMenuView = Random.shuffle(menuViews).headOption
+      .fold { MenuView(
+        name = "NONE",
+        ingredients = Seq("NONE"),
+        recipe = "NONE",
+        link = ""
+      )}(menuView => menuView)
+      updatedRandomMenuView <- menuViewService.findByName(randomMenuView.name)
+      .map { menuViews =>
+        menuViews.headOption
+        .fold(randomMenuView) { menuView =>
+          menuView.copy(selectedCount = randomMenuView.selectedCount
+          .map(_ + 1))
         }
+      }
     } yield {
       val event = Event(
         `type` = EventType.RANDOM_MENU_ASKED,
@@ -112,18 +103,17 @@ class Aggregate @Inject()(config: Config,
         sendEmail(randomMenuView, userViews)
       }
 
-      updatedRandomMenuView.uuid.get
+      updatedRandomMenuView.uuid
     }
   }
 
-  def createOrUpdateMenuViewSchema(version: JsValue) = {
-    val event =
-      Event(`type` = EventType.MENU_SCHEMA_EVOLVED, data = Some(version))
+  def createOrUpdateMenuViewSchema(version: JsValue): String = {
+    val event = Event(`type` = EventType.MENU_SCHEMA_EVOLVED, data = Some(version))
     eventService.menuEventBus offer event
-    Future(ResponseMessage.DATABASE_EVOLUTION)
+    ResponseMessage.DATABASE_EVOLUTION
   }
 
-  private def sendEmail(menu: MenuView, users: Seq[UserView]) = {
+  private def sendEmail(menu: MenuView, users: Seq[UserView]): Unit = {
     emailSender.send(
       "smtp.gmail.com",
       "465",
