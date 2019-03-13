@@ -9,6 +9,8 @@ resolvers += Resolver.jcenterRepo
 
 dockerRepository := Some("fsw0422")
 
+scapegoatVersion in ThisBuild := "1.3.8"
+
 val monocleVersion = "1.4.0"
 val slickVersion = "3.2.3"
 val slickPgVersion = "0.17.0"
