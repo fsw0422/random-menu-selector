@@ -15,8 +15,8 @@ class QueryController @Inject()(menuViewService: MenuViewService)(
   def getMenusByNameLike(name: String): Action[AnyContent] =
     Action.async { implicit request =>
       menuViewService.findByNameLike(name)
-      .map { menuViews =>
-        Ok(Json.obj("result" -> Json.toJson(menuViews)))
-      }
+        .map { menuViews =>
+          Ok(Json.obj("result" -> Json.toJson(menuViews)))
+        }
     }
 }

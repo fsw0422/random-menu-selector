@@ -90,7 +90,7 @@ class UserViewDao extends Dao with LazyLogging {
     )
   }
 
-  def evolve(targetVersion: String): Any = {
+  def evolve(targetVersion: String): Unit = {
     targetVersion match {
       case "1.0" =>
         db.run(sqlu"""
@@ -100,6 +100,7 @@ class UserViewDao extends Dao with LazyLogging {
             #${UserView.emailColumn} TEXT UNIQUE DEFAULT '' NOT NULL
           )
         """)
+        ()
       case "2.0" =>
         db.run(
           DBIO.seq(
@@ -108,6 +109,7 @@ class UserViewDao extends Dao with LazyLogging {
             sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.emailColumn} DROP DEFAULT"""
           )
         )
+        ()
       case _ =>
         logger.error(s"No such versioning defined with $targetVersion")
     }

@@ -111,7 +111,7 @@ class MenuViewDao extends Dao with LazyLogging {
     )
   }
 
-  def evolve(targetVersion: String): Any = {
+  def evolve(targetVersion: String): Unit = {
     targetVersion match {
       case "1.0" =>
         db.run(sqlu"""
@@ -124,6 +124,7 @@ class MenuViewDao extends Dao with LazyLogging {
             #${MenuView.selectedCountColumn} INTEGER NOT NULL DEFAULT 0
           )
         """)
+        ()
       case "2.0" =>
         db.run(
           DBIO.seq(
@@ -135,6 +136,7 @@ class MenuViewDao extends Dao with LazyLogging {
             sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.nameColumn} DROP DEFAULT"""
           )
         )
+        ()
       case _ =>
         logger.error(s"No such versioning defined with $targetVersion")
     }

@@ -57,20 +57,20 @@ class Aggregate @Inject()(config: Config,
   }
 
   def deleteMenu(menu: JsValue): String = {
-    val menuUuidOption = (menu \ "uuid").asOpt[String]
-    menuUuidOption
-    .fold(ResponseMessage.NO_SUCH_IDENTITY) { menuUuidString =>
-      val menuUuid = UUID.fromString(menuUuidString)
-      menuViewService.delete(menuUuid)
+    val menuUuidStringOption = (menu \ "uuid").asOpt[String]
+    menuUuidStringOption
+      .fold(ResponseMessage.NO_SUCH_IDENTITY) { menuUuidString =>
+        val menuUuid = UUID.fromString(menuUuidString)
+        menuViewService.delete(menuUuid)
 
-      val event = Event(
-        `type` = EventType.MENU_PROFILE_DELETED,
-        data = Some(Json.toJson(menuUuid)),
-      )
-      eventService.menuEventBus offer event
+        val event = Event(
+          `type` = EventType.MENU_PROFILE_DELETED,
+          data = Some(Json.toJson(menuUuid)),
+        )
+        eventService.menuEventBus offer event
 
-      menuUuidString
-    }
+        menuUuidString
+      }
   }
 
   def selectRandomMenu(): Future[Option[UUID]] = {
@@ -78,20 +78,23 @@ class Aggregate @Inject()(config: Config,
       menuViews <- menuViewService.findAll()
       userViews <- userViewService.findAll()
       randomMenuView = Random.shuffle(menuViews).headOption
-      .fold { MenuView(
-        name = "NONE",
-        ingredients = Seq("NONE"),
-        recipe = "NONE",
-        link = ""
-      )}(menuView => menuView)
+        .fold {
+          MenuView(
+            name = "NONE",
+            ingredients = Seq("NONE"),
+            recipe = "NONE",
+            link = ""
+          )
+        }(menuView => menuView)
       updatedRandomMenuView <- menuViewService.findByName(randomMenuView.name)
-      .map { menuViews =>
-        menuViews.headOption
-        .fold(randomMenuView) { menuView =>
-          menuView.copy(selectedCount = randomMenuView.selectedCount
-          .map(_ + 1))
+        .map { menuViews =>
+          menuViews.headOption
+            .fold(randomMenuView) { menuView =>
+              val updatedRandomMenuView = randomMenuView.selectedCount
+                .map(_ + 1)
+              menuView.copy(selectedCount = updatedRandomMenuView)
+            }
         }
-      }
     } yield {
       val event = Event(
         `type` = EventType.RANDOM_MENU_ASKED,

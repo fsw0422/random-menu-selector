@@ -28,12 +28,12 @@ class Aggregate @Inject()(eventService: EventService,
     val userView = user.as[UserView]
     for {
       updatedUserView <- userViewService.findByEmail(userView.email)
-      .map { userViews =>
-        userViews.headOption
-        .fold(userView) { head =>
-          head.copy(name = userView.name, email = userView.email)
+        .map { userViews =>
+          userViews.headOption
+            .fold(userView) { head =>
+              head.copy(name = userView.name, email = userView.email)
+            }
         }
-      }
     } yield {
       val event = Event(
         `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
@@ -46,20 +46,20 @@ class Aggregate @Inject()(eventService: EventService,
   }
 
   def deleteUser(user: JsValue): String = {
-    val userUuidOption = (user \ "uuid").asOpt[String]
-    userUuidOption
-    .fold(ResponseMessage.NO_SUCH_IDENTITY) { userUuidString =>
-      val userUuid = UUID.fromString(userUuidString)
-      userViewService.delete(userUuid)
+    val userUuidStringOption = (user \ "uuid").asOpt[String]
+    userUuidStringOption
+      .fold(ResponseMessage.NO_SUCH_IDENTITY) { userUuidString =>
+        val userUuid = UUID.fromString(userUuidString)
+        userViewService.delete(userUuid)
 
-      val event = Event(
-        `type` = EventType.USER_PROFILE_DELETED,
-        data = Some(Json.toJson(userUuid)),
-      )
-      eventService.userEventBus offer event
+        val event = Event(
+          `type` = EventType.USER_PROFILE_DELETED,
+          data = Some(Json.toJson(userUuid)),
+        )
+        eventService.userEventBus offer event
 
-      userUuidString
-    }
+        userUuidString
+      }
   }
 
   def createOrUpdateUserViewSchema(version: JsValue): String = {

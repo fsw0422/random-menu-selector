@@ -20,26 +20,26 @@ class ViewDatabase @Inject()(eventDao: EventDao) extends LazyLogging {
     */
   def viewVersionNonExistAction(
     event: Event
-  )(action: String => Any)(implicit executionContext: ExecutionContext): Unit = {
+  )(action: String => Unit)(implicit executionContext: ExecutionContext): Unit = {
     event.data
-    .fold(logger.warn(s"[$event] is None")) { eventData =>
-      val targetVersion = (eventData \ "version").as[String]
-      eventDao.findByType(event.`type`)
-      .map { storedEvents =>
-        val targetVersionCount = storedEvents.count { storedEvent =>
-          storedEvent.data
-          .fold(false) { storedEventData =>
-            val eventVersion = (storedEventData \ "version").as[String]
-            targetVersion == eventVersion
-          }
-        }
+      .fold(logger.warn(s"[$event] is None")) { eventData =>
+        val targetVersion = (eventData \ "version").as[String]
+        eventDao.findByType(event.`type`)
+          .map { storedEvents =>
+            val targetVersionCount = storedEvents.count { storedEvent =>
+              storedEvent.data
+                .fold(false) { storedEventData =>
+                  val eventVersion = (storedEventData \ "version").as[String]
+                  targetVersion == eventVersion
+                }
+            }
 
-        if (targetVersionCount == 1) {
-          action.apply(targetVersion)
-        } else {
-          logger.warn(s"View version $targetVersion already exists")
+            if (targetVersionCount == 1) {
+              action.apply(targetVersion)
+            } else {
+              logger.warn(s"View version $targetVersion already exists")
+            }
         }
       }
-    }
   }
 }

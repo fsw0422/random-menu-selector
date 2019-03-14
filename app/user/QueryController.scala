@@ -15,8 +15,8 @@ class QueryController @Inject()(userViewService: UserViewService)(
   def getAllUsers(): Action[AnyContent] =
     Action.async { implicit request =>
       userViewService.findAll()
-      .map { userViews =>
-        Ok(Json.obj("result" -> Json.toJson(userViews)))
-      }
+        .map { userViews =>
+          Ok(Json.obj("result" -> Json.toJson(userViews)))
+        }
     }
 }
