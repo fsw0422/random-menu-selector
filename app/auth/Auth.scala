@@ -13,8 +13,9 @@ class Auth @Inject()(configuration: Configuration)(
 
   def checkPassword(requestBody: JsValue): Boolean = {
     val passwordOpt = (requestBody \ "password").asOpt[String]
-    passwordOpt.fold(false){ password =>
-      password == configuration.get[String]("write.password")
-    }
+    passwordOpt
+      .fold(false) { password =>
+        password == configuration.get[String]("write.password")
+      }
   }
 }

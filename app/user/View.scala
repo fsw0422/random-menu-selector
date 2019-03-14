@@ -26,7 +26,7 @@ object UserView {
 }
 
 @Singleton
-class UserViewService @Inject()(userViewDao: UserViewDao) extends LazyLogging {
+class UserViewService @Inject()(userViewDao: UserViewDao) {
 
   def upsert(userView: UserView): Future[Int] = {
     userViewDao.upsert(userView)
@@ -44,7 +44,7 @@ class UserViewService @Inject()(userViewDao: UserViewDao) extends LazyLogging {
     userViewDao.delete(uuid)
   }
 
-  def evolve(targetVersion: String): Any = {
+  def evolve(targetVersion: String): Unit = {
     userViewDao.evolve(targetVersion)
   }
 }

@@ -32,9 +32,9 @@ object MenuView {
 }
 
 @Singleton
-class MenuViewService @Inject()(menuViewDao: MenuViewDao) extends LazyLogging {
+class MenuViewService @Inject()(menuViewDao: MenuViewDao) {
 
-  def upsert(menuView: MenuView) = {
+  def upsert(menuView: MenuView): Future[Int] = {
     menuViewDao.upsert(menuView)
   }
 
@@ -54,7 +54,7 @@ class MenuViewService @Inject()(menuViewDao: MenuViewDao) extends LazyLogging {
     menuViewDao.delete(uuid)
   }
 
-  def evolve(targetVersion: String): Any = {
+  def evolve(targetVersion: String): Unit = {
     menuViewDao.evolve(targetVersion)
   }
 }

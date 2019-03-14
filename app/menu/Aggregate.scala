@@ -23,12 +23,8 @@ class Aggregate @Inject()(config: Config,
 
   private implicit val actorSystem = ActorSystem("MenuAggregate")
   private implicit val executionContext = actorSystem.dispatcher
-  private implicit val actorMaterializerSettings = ActorMaterializerSettings(
-    actorSystem
-  )
-  private implicit val actorMaterializer = ActorMaterializer(
-    actorMaterializerSettings
-  )
+  private implicit val actorMaterializerSettings = ActorMaterializerSettings(actorSystem)
+  private implicit val actorMaterializer = ActorMaterializer(actorMaterializerSettings)
 
   def createOrUpdateMenu(menu: JsValue): Future[Option[UUID]] = {
     val menuView = menu.as[MenuView]
@@ -36,14 +32,14 @@ class Aggregate @Inject()(config: Config,
       updatedMenuView <- menuViewService.findByName(menuView.name)
         .map { menuViews =>
           menuViews.headOption
-          .fold(menuView) { menuView =>
-            menuView.copy(
-              name = menuView.name,
-              ingredients = menuView.ingredients,
-              recipe = menuView.recipe,
-              link = menuView.link
-            )
-          }
+            .fold(menuView) { menuView =>
+              menuView.copy(
+                name = menuView.name,
+                ingredients = menuView.ingredients,
+                recipe = menuView.recipe,
+                link = menuView.link
+              )
+            }
         }
     } yield {
       val event = Event(
@@ -57,8 +53,8 @@ class Aggregate @Inject()(config: Config,
   }
 
   def deleteMenu(menu: JsValue): String = {
-    val menuUuidStringOption = (menu \ "uuid").asOpt[String]
-    menuUuidStringOption
+    val menuUuidStrOpt = (menu \ "uuid").asOpt[String]
+    menuUuidStrOpt
       .fold(ResponseMessage.NO_SUCH_IDENTITY) { menuUuidString =>
         val menuUuid = UUID.fromString(menuUuidString)
         menuViewService.delete(menuUuid)

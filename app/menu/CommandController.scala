@@ -45,9 +45,9 @@ class CommandController @Inject()(auth: Auth, aggregate: Aggregate)(
   def selectRandomMenu(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
       aggregate.selectRandomMenu()
-      .map { result =>
-        Ok(Json.obj("result" -> Json.toJson(result)))
-      }
+        .map { result =>
+          Ok(Json.obj("result" -> Json.toJson(result)))
+        }
     }
 
   def createOrUpdateMenuViewSchema(): Action[JsValue] =

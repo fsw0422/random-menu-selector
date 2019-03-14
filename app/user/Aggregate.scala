@@ -17,12 +17,8 @@ class Aggregate @Inject()(eventService: EventService,
 
   private implicit val actorSystem = ActorSystem("UserAggregate")
   private implicit val executionContext = actorSystem.dispatcher
-  private implicit val actorMaterializerSettings = ActorMaterializerSettings(
-    actorSystem
-  )
-  private implicit val actorMaterializer = ActorMaterializer(
-    actorMaterializerSettings
-  )
+  private implicit val actorMaterializerSettings = ActorMaterializerSettings(actorSystem)
+  private implicit val actorMaterializer = ActorMaterializer(actorMaterializerSettings)
 
   def createOrUpdateUser(user: JsValue) : Future[Option[UUID]] = {
     val userView = user.as[UserView]
@@ -46,10 +42,10 @@ class Aggregate @Inject()(eventService: EventService,
   }
 
   def deleteUser(user: JsValue): String = {
-    val userUuidStringOption = (user \ "uuid").asOpt[String]
-    userUuidStringOption
-      .fold(ResponseMessage.NO_SUCH_IDENTITY) { userUuidString =>
-        val userUuid = UUID.fromString(userUuidString)
+    val userUuidStrOpt = (user \ "uuid").asOpt[String]
+    userUuidStrOpt
+      .fold(ResponseMessage.NO_SUCH_IDENTITY) { userUuidStr =>
+        val userUuid = UUID.fromString(userUuidStr)
         userViewService.delete(userUuid)
 
         val event = Event(
@@ -58,7 +54,7 @@ class Aggregate @Inject()(eventService: EventService,
         )
         eventService.userEventBus offer event
 
-        userUuidString
+        userUuidStr
       }
   }
 
