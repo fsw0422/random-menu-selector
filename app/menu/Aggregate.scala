@@ -15,11 +15,13 @@ import scala.concurrent.Future
 import scala.util.Random
 
 @Singleton
-class Aggregate @Inject()(config: Config,
-                          emailSender: EmailSender,
-                          eventService: EventService,
-                          menuViewService: MenuViewService,
-                          userViewService: UserViewService) {
+class Aggregate @Inject()(
+  config: Config,
+  emailSender: EmailSender,
+  eventService: EventService,
+  menuViewService: MenuViewService,
+  userViewService: UserViewService
+) {
 
   private implicit val actorSystem = ActorSystem("MenuAggregate")
   private implicit val executionContext = actorSystem.dispatcher

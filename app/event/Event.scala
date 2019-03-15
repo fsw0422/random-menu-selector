@@ -3,8 +3,7 @@ package event
 import java.util.UUID
 
 import akka.actor.ActorSystem
-import akka.stream.javadsl.SourceQueueWithComplete
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
 import com.typesafe.scalalogging.LazyLogging
 import event.EventType.EventType
@@ -31,11 +30,12 @@ case class Event(uuid: Option[UUID] = Some(UUID.randomUUID()),
                  data: Option[JsValue] = None)
 
 @Singleton
-class EventService @Inject()(eventDao: EventDao,
-                             viewDatabase: ViewDatabase,
-                             menuViewService: MenuViewService,
-                             userViewService: UserViewService)
-    extends LazyLogging {
+class EventService @Inject()(
+  eventDao: EventDao,
+  viewDatabase: ViewDatabase,
+  menuViewService: MenuViewService,
+  userViewService: UserViewService
+) extends LazyLogging {
 
   private implicit val actorSystem = ActorSystem("Event")
   private implicit val executionContext = actorSystem.dispatcher
@@ -105,8 +105,8 @@ class EventService @Inject()(eventDao: EventDao,
   }
 
   private def eventStream(bufferSize: Int)
-                         (flowHandler: Event => Event)
-                         (sinkHandler: Event => Any) : SourceQueueWithComplete[Event] = {
+    (flowHandler: Event => Event)
+    (sinkHandler: Event => Any): SourceQueueWithComplete[Event] = {
     Source
       .queue[Event](bufferSize, OverflowStrategy.backpressure)
       .via(Flow[Event].map(event => flowHandler.apply(event)))

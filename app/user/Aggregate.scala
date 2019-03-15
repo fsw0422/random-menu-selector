@@ -12,8 +12,10 @@ import utils.ResponseMessage
 import scala.concurrent.Future
 
 @Singleton
-class Aggregate @Inject()(eventService: EventService,
-                          userViewService: UserViewService) {
+class Aggregate @Inject()(
+  eventService: EventService,
+  userViewService: UserViewService
+) {
 
   private implicit val actorSystem = ActorSystem("UserAggregate")
   private implicit val executionContext = actorSystem.dispatcher

@@ -9,7 +9,10 @@ import utils.ResponseMessage
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class CommandController @Inject()(auth: Auth, aggregate: Aggregate)(
+class CommandController @Inject()(
+  auth: Auth,
+  aggregate: Aggregate
+)(
   implicit controllerComponents: ControllerComponents,
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
