@@ -1,0 +1,12 @@
+version: '3'
+services:
+  random-menu-selector:
+    image: "fsw0422/random-menu-selector:latest"
+    restart: always
+    ports:
+      - "9000:9000"
+    environment:
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - POSTGRESQL_HOST=${POSTGRESQL_HOST}
+      - POSTGRESQL_PASSWORD=${POSTGRESQL_PASSWORD} 
+      - WRITE_PASSWORD=${WRITE_PASSWORD}
