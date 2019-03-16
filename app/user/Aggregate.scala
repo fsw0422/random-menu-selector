@@ -22,7 +22,7 @@ class Aggregate @Inject()(
   private implicit val actorMaterializerSettings = ActorMaterializerSettings(actorSystem)
   private implicit val actorMaterializer = ActorMaterializer(actorMaterializerSettings)
 
-  def createOrUpdateUser(user: JsValue) : Future[Option[UUID]] = {
+  def createOrUpdateUser(user: JsValue): Future[Option[UUID]] = {
     val userView = user.as[UserView]
     for {
       updatedUserView <- userViewService.findByEmail(userView.email)

@@ -18,9 +18,8 @@ class ViewDatabase @Inject()(eventDao: EventDao) extends LazyLogging {
     * @param event The incoming event specifying what version of schema to apply
     * @param action The action that needs to be fed
     */
-  def viewVersionNonExistAction(
-    event: Event
-  )(action: String => Unit)(implicit executionContext: ExecutionContext): Unit = {
+  def viewVersionNonExistAction(event: Event)(action: String => Unit)
+    (implicit executionContext: ExecutionContext): Unit = {
     event.data
       .fold(logger.warn(s"[$event] is None")) { eventData =>
         val targetVersion = (eventData \ "version").as[String]
