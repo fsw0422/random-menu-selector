@@ -26,25 +26,25 @@ object UserView {
 }
 
 @Singleton
-class UserViewService @Inject()(userViewDao: UserViewDao) extends LazyLogging {
+class UserViewService @Inject()(userViewDao: UserViewDao) {
 
-  def upsert(userView: UserView) = {
+  def upsert(userView: UserView): Future[Int] = {
     userViewDao.upsert(userView)
   }
 
-  def findByEmail(email: String) = {
+  def findByEmail(email: String): Future[Seq[UserView]] = {
     userViewDao.findByEmail(email)
   }
 
-  def findAll() = {
+  def findAll(): Future[Seq[UserView]] = {
     userViewDao.findAll()
   }
 
-  def delete(uuid: UUID) = {
+  def delete(uuid: UUID): Future[Int] = {
     userViewDao.delete(uuid)
   }
 
-  def evolve(targetVersion: String) = {
+  def evolve(targetVersion: String): Unit = {
     userViewDao.evolve(targetVersion)
   }
 }
@@ -66,7 +66,7 @@ class UserViewDao extends Dao with LazyLogging {
 
   private val userViewTable = TableQuery[UserViewTable]
 
-  def upsert(userView: UserView) = {
+  def upsert(userView: UserView): Future[Int] = {
     db.run(userViewTable.insertOrUpdate(userView))
   }
 
@@ -82,7 +82,7 @@ class UserViewDao extends Dao with LazyLogging {
     db.run(userViewTable.result)
   }
 
-  def delete(uuid: UUID) = {
+  def delete(uuid: UUID): Future[Int] = {
     db.run(
       userViewTable
         .filter(menuView => menuView.uuid === uuid)
@@ -90,7 +90,7 @@ class UserViewDao extends Dao with LazyLogging {
     )
   }
 
-  def evolve(targetVersion: String) = {
+  def evolve(targetVersion: String): Unit = {
     targetVersion match {
       case "1.0" =>
         db.run(sqlu"""
@@ -100,6 +100,7 @@ class UserViewDao extends Dao with LazyLogging {
             #${UserView.emailColumn} TEXT UNIQUE DEFAULT '' NOT NULL
           )
         """)
+        ()
       case "2.0" =>
         db.run(
           DBIO.seq(
@@ -108,6 +109,7 @@ class UserViewDao extends Dao with LazyLogging {
             sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.emailColumn} DROP DEFAULT"""
           )
         )
+        ()
       case _ =>
         logger.error(s"No such versioning defined with $targetVersion")
     }

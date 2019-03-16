@@ -32,9 +32,9 @@ object MenuView {
 }
 
 @Singleton
-class MenuViewService @Inject()(menuViewDao: MenuViewDao) extends LazyLogging {
+class MenuViewService @Inject()(menuViewDao: MenuViewDao) {
 
-  def upsert(menuView: MenuView) = {
+  def upsert(menuView: MenuView): Future[Int] = {
     menuViewDao.upsert(menuView)
   }
 
@@ -50,11 +50,11 @@ class MenuViewService @Inject()(menuViewDao: MenuViewDao) extends LazyLogging {
     menuViewDao.findAll()
   }
 
-  def delete(uuid: UUID) = {
+  def delete(uuid: UUID): Future[Int] = {
     menuViewDao.delete(uuid)
   }
 
-  def evolve(targetVersion: String) = {
+  def evolve(targetVersion: String): Unit = {
     menuViewDao.evolve(targetVersion)
   }
 }
@@ -79,7 +79,7 @@ class MenuViewDao extends Dao with LazyLogging {
 
   private val menuViewTable = TableQuery[MenuViewTable]
 
-  def upsert(menuView: MenuView) = {
+  def upsert(menuView: MenuView): Future[Int] = {
     db.run(menuViewTable.insertOrUpdate(menuView))
   }
 
@@ -103,7 +103,7 @@ class MenuViewDao extends Dao with LazyLogging {
     db.run(menuViewTable.result)
   }
 
-  def delete(uuid: UUID) = {
+  def delete(uuid: UUID): Future[Int] = {
     db.run(
       menuViewTable
         .filter(menuView => menuView.uuid === uuid)
@@ -111,7 +111,7 @@ class MenuViewDao extends Dao with LazyLogging {
     )
   }
 
-  def evolve(targetVersion: String) = {
+  def evolve(targetVersion: String): Unit = {
     targetVersion match {
       case "1.0" =>
         db.run(sqlu"""
@@ -124,6 +124,7 @@ class MenuViewDao extends Dao with LazyLogging {
             #${MenuView.selectedCountColumn} INTEGER NOT NULL DEFAULT 0
           )
         """)
+        ()
       case "2.0" =>
         db.run(
           DBIO.seq(
@@ -135,6 +136,7 @@ class MenuViewDao extends Dao with LazyLogging {
             sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.nameColumn} DROP DEFAULT"""
           )
         )
+        ()
       case _ =>
         logger.error(s"No such versioning defined with $targetVersion")
     }

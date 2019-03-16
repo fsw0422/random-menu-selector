@@ -17,7 +17,7 @@ class EmailSender {
            smtpPassword: String,
            from: String,
            encoding: String,
-           emailDescription: Email) {
+           emailDescription: Email): Unit = {
     val props = new Properties()
     props.put("mail.smtps.host", smtpHost)
     props.put("mail.smtps.port", smtpPort)

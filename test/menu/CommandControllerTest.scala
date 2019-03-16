@@ -19,13 +19,13 @@ import utils.EmailSender
 import scala.concurrent.Future
 
 @RunWith(classOf[JUnitRunner])
-class CommandControllerTest
-    extends FlatSpec
+class CommandControllerTest extends FlatSpec
     with MockitoSugar
     with ArgumentMatchersSugar
     with GivenWhenThen
     with Matchers
     with Results {
+
   private val emailSenderMock = mock[EmailSender]
   private val eventDaoMock = mock[EventDao]
   private val menuViewDaoMock = mock[MenuViewDao]
@@ -45,8 +45,7 @@ class CommandControllerTest
 
   it should "return ok status with random menu's UUID" in {
     Given("an apple pie and pear pie")
-    val applePieUuid = UUID
-      .fromString("123e4567-e89b-12d3-a456-426655440000")
+    val applePieUuid = UUID.fromString("123e4567-e89b-12d3-a456-426655440000")
     val applePieView = MenuView(
       Some(applePieUuid),
       "ApplePie",
@@ -54,8 +53,7 @@ class CommandControllerTest
       "bake apple",
       "appleLink"
     )
-    val pearPieUuid = UUID
-      .fromString("223e4567-e89b-12d3-a456-426655440000")
+    val pearPieUuid = UUID.fromString("223e4567-e89b-12d3-a456-426655440000")
     val pearPieView = MenuView(
       Some(pearPieUuid),
       "PearPie",
@@ -69,8 +67,7 @@ class CommandControllerTest
       .thenReturn(Future(Seq(applePieView)))
 
     And("a default user James")
-    val userUuid = UUID
-      .fromString("124e4567-e89b-12d3-a456-426655440000")
+    val userUuid = UUID.fromString("124e4567-e89b-12d3-a456-426655440000")
     val userView = UserView(Some(userUuid), "james", "james@email.com")
     when(userViewDaoMock.findAll())
       .thenReturn(Future(Seq(userView)))

@@ -2,22 +2,25 @@ package user
 
 import auth.Auth
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json.Json
-import play.api.mvc.{AbstractController, ControllerComponents}
+import play.api.libs.json.{JsValue, Json}
+import play.api.mvc.{AbstractController, Action, ControllerComponents}
 import utils.ResponseMessage
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class CommandController @Inject()(auth: Auth, aggregate: Aggregate)(
+class CommandController @Inject()(
+  auth: Auth,
+  aggregate: Aggregate
+)(
   implicit controllerComponents: ControllerComponents,
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
 
-  def createOrUpdateUser() =
+  def createOrUpdateUser(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
       for {
-        isAuth <- auth.checkPassword(request.body)
+        isAuth <- Future(auth.checkPassword(request.body))
         result <- {
           if (isAuth) {
             aggregate.createOrUpdateUser(request.body)
@@ -28,13 +31,13 @@ class CommandController @Inject()(auth: Auth, aggregate: Aggregate)(
       } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
     }
 
-  def deleteUser() =
+  def deleteUser(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
       for {
-        isAuth <- auth.checkPassword(request.body)
+        isAuth <- Future(auth.checkPassword(request.body))
         result <- {
           if (isAuth) {
-            aggregate.deleteUser(request.body)
+            Future(aggregate.deleteUser(request.body))
           } else {
             Future(ResponseMessage.UNAUTHORIZED)
           }
@@ -42,13 +45,13 @@ class CommandController @Inject()(auth: Auth, aggregate: Aggregate)(
       } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
     }
 
-  def createOrUpdateUserViewSchema() =
+  def createOrUpdateUserViewSchema(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
       for {
-        isAuth <- auth.checkPassword(request.body)
+        isAuth <- Future(auth.checkPassword(request.body))
         result <- {
           if (isAuth) {
-            aggregate.createOrUpdateUserViewSchema(request.body)
+            Future(aggregate.createOrUpdateUserViewSchema(request.body))
           } else {
             Future(ResponseMessage.UNAUTHORIZED)
           }

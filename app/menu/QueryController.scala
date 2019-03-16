@@ -2,7 +2,7 @@ package menu
 
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import play.api.mvc.{AbstractController, ControllerComponents}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 
 import scala.concurrent.ExecutionContext
 
@@ -12,10 +12,9 @@ class QueryController @Inject()(menuViewService: MenuViewService)(
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
 
-  def getMenusByNameLike(name: String) =
+  def getMenusByNameLike(name: String): Action[AnyContent] =
     Action.async { implicit request =>
-      menuViewService
-        .findByNameLike(name)
+      menuViewService.findByNameLike(name)
         .map { menuViews =>
           Ok(Json.obj("result" -> Json.toJson(menuViews)))
         }

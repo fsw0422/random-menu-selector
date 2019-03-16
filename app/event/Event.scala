@@ -3,7 +3,7 @@ package event
 import java.util.UUID
 
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
 import com.typesafe.scalalogging.LazyLogging
 import event.EventType.EventType
@@ -30,20 +30,17 @@ case class Event(uuid: Option[UUID] = Some(UUID.randomUUID()),
                  data: Option[JsValue] = None)
 
 @Singleton
-class EventService @Inject()(eventDao: EventDao,
-                             viewDatabase: ViewDatabase,
-                             menuViewService: MenuViewService,
-                             userViewService: UserViewService)
-    extends LazyLogging {
+class EventService @Inject()(
+  eventDao: EventDao,
+  viewDatabase: ViewDatabase,
+  menuViewService: MenuViewService,
+  userViewService: UserViewService
+) extends LazyLogging {
 
   private implicit val actorSystem = ActorSystem("Event")
   private implicit val executionContext = actorSystem.dispatcher
-  private implicit val actorMaterializerSettings = ActorMaterializerSettings(
-    actorSystem
-  )
-  private implicit val actorMaterializer = ActorMaterializer(
-    actorMaterializerSettings
-  )
+  private implicit val actorMaterializerSettings = ActorMaterializerSettings(actorSystem)
+  private implicit val actorMaterializer = ActorMaterializer(actorMaterializerSettings)
 
   val menuEventBus = eventStream(5) { event =>
     event.`type` match {
@@ -59,9 +56,15 @@ class EventService @Inject()(eventDao: EventDao,
     event.`type` match {
       case EventType.RANDOM_MENU_ASKED |
           EventType.MENU_PROFILE_CREATED_OR_UPDATED =>
-        menuViewService.upsert(event.data.get.as[MenuView])
+        event.data
+          .fold(logger.warn(s"[$event] is None")) { menuViewJson =>
+            menuViewService.upsert(menuViewJson.as[MenuView])
+          }
       case EventType.MENU_PROFILE_DELETED =>
-        menuViewService.delete(event.data.get.as[UUID])
+        event.data
+          .fold(logger.warn(s"[$event] is None")) { menuUuidJson =>
+            menuViewService.delete(menuUuidJson.as[UUID])
+          }
       case EventType.MENU_SCHEMA_EVOLVED =>
         viewDatabase.viewVersionNonExistAction(event)(
           targetVersion => menuViewService.evolve(targetVersion)
@@ -83,9 +86,15 @@ class EventService @Inject()(eventDao: EventDao,
   } { event =>
     event.`type` match {
       case EventType.USER_PROFILE_CREATED_OR_UPDATED =>
-        userViewService.upsert(event.data.get.as[UserView])
+        event.data
+          .fold(logger.warn(s"[$event] is None")) { menuViewJson =>
+            userViewService.upsert(menuViewJson.as[UserView])
+          }
       case EventType.USER_PROFILE_DELETED =>
-        userViewService.delete(event.data.get.as[UUID])
+        event.data
+          .fold(logger.warn(s"[$event] is None")) { menuUuidJson =>
+            menuViewService.delete(menuUuidJson.as[UUID])
+          }
       case EventType.USER_SCHEMA_EVOLVED =>
         viewDatabase.viewVersionNonExistAction(event)(
           targetVersion => userViewService.evolve(targetVersion)
@@ -95,9 +104,9 @@ class EventService @Inject()(eventDao: EventDao,
     }
   }
 
-  private def eventStream(
-    bufferSize: Int
-  )(flowHandler: Event => Event)(sinkHandler: Event => Any) = {
+  private def eventStream(bufferSize: Int)
+    (flowHandler: Event => Event)
+    (sinkHandler: Event => Any): SourceQueueWithComplete[Event] = {
     Source
       .queue[Event](bufferSize, OverflowStrategy.backpressure)
       .via(Flow[Event].map(event => flowHandler.apply(event)))
@@ -129,7 +138,7 @@ class EventDao extends Dao with LazyLogging {
 
   private val eventTable = TableQuery[EventTable]
 
-  def insert(event: Event) = {
+  def insert(event: Event): Future[Int] = {
     db.run(eventTable += event)
   }
 

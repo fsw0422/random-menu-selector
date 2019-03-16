@@ -12,29 +12,25 @@ import utils.ResponseMessage
 import scala.concurrent.Future
 
 @Singleton
-class Aggregate @Inject()(eventService: EventService,
-                          userViewService: UserViewService) {
+class Aggregate @Inject()(
+  eventService: EventService,
+  userViewService: UserViewService
+) {
 
   private implicit val actorSystem = ActorSystem("UserAggregate")
   private implicit val executionContext = actorSystem.dispatcher
-  private implicit val actorMaterializerSettings = ActorMaterializerSettings(
-    actorSystem
-  )
-  private implicit val actorMaterializer = ActorMaterializer(
-    actorMaterializerSettings
-  )
+  private implicit val actorMaterializerSettings = ActorMaterializerSettings(actorSystem)
+  private implicit val actorMaterializer = ActorMaterializer(actorMaterializerSettings)
 
-  def createOrUpdateUser(user: JsValue) = {
+  def createOrUpdateUser(user: JsValue): Future[Option[UUID]] = {
     val userView = user.as[UserView]
     for {
-      updatedUserView <- userViewService
-        .findByEmail(userView.email)
+      updatedUserView <- userViewService.findByEmail(userView.email)
         .map { userViews =>
-          if (userViews.nonEmpty) {
-            userViews.head.copy(name = userView.name, email = userView.email)
-          } else {
-            userView
-          }
+          userViews.headOption
+            .fold(userView) { head =>
+              head.copy(name = userView.name, email = userView.email)
+            }
         }
     } yield {
       val event = Event(
@@ -43,32 +39,30 @@ class Aggregate @Inject()(eventService: EventService,
       )
       eventService.userEventBus offer event
 
-      updatedUserView.uuid.get
+      updatedUserView.uuid
     }
   }
 
-  def deleteUser(user: JsValue) = {
-    val userUuidOption = (user \ "uuid").asOpt[String]
-    if (userUuidOption.isEmpty) {
-      Future(ResponseMessage.NO_SUCH_IDENTITY)
-    } else {
-      val userUuid = UUID.fromString(userUuidOption.get)
-      userViewService.delete(userUuid)
+  def deleteUser(user: JsValue): String = {
+    val userUuidStrOpt = (user \ "uuid").asOpt[String]
+    userUuidStrOpt
+      .fold(ResponseMessage.NO_SUCH_IDENTITY) { userUuidStr =>
+        val userUuid = UUID.fromString(userUuidStr)
+        userViewService.delete(userUuid)
 
-      val event = Event(
-        `type` = EventType.USER_PROFILE_DELETED,
-        data = Some(Json.toJson(userUuid)),
-      )
-      eventService.userEventBus offer event
+        val event = Event(
+          `type` = EventType.USER_PROFILE_DELETED,
+          data = Some(Json.toJson(userUuid)),
+        )
+        eventService.userEventBus offer event
 
-      Future(userUuid)
-    }
+        userUuidStr
+      }
   }
 
-  def createOrUpdateUserViewSchema(version: JsValue) = {
-    val event =
-      Event(`type` = EventType.USER_SCHEMA_EVOLVED, data = Some(version))
+  def createOrUpdateUserViewSchema(version: JsValue): String = {
+    val event = Event(`type` = EventType.USER_SCHEMA_EVOLVED, data = Some(version))
     eventService.userEventBus offer event
-    Future(ResponseMessage.DATABASE_EVOLUTION)
+    ResponseMessage.DATABASE_EVOLUTION
   }
 }
