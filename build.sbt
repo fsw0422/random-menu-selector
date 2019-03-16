@@ -35,4 +35,10 @@ lazy val RandomMenuSelector = (project in file("."))
   .enablePlugins(ClasspathJarPlugin)
 
 fork in run := true
-fork in test := true
+
+javaOptions in Test ++= Seq(
+  "-DWRITE_PASSWORD=1234",
+  "-DPOSTGRESQL_PASSWORD=1234",
+  "-DPOSTGRESQL_HOST=localhost",
+  "-DEMAIL_PASSWORD=1234"
+)
