@@ -4,16 +4,14 @@ import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.json.JsValue
 
-import scala.concurrent.ExecutionContext
-
 @Singleton
-class Auth @Inject()(configuration: Configuration)(implicit executionContext: ExecutionContext) {
+class Auth {
 
-  def checkPassword(requestBody: JsValue): Boolean = {
-    val passwordOpt = (requestBody \ "password").asOpt[String]
-    passwordOpt
-      .fold(false) { password =>
-        password == configuration.get[String]("write.password")
+  def checkPassword(requestBody: JsValue, password: String): Boolean = {
+    val attemptedPasswordOpt = (requestBody \ "password").asOpt[String]
+    attemptedPasswordOpt
+      .fold(false) { attemptedPassword =>
+        attemptedPassword == password
       }
   }
 }

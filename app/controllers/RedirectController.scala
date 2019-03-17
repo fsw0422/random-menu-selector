@@ -1,18 +1,14 @@
 package controllers
 
 import javax.inject.{Inject, Singleton}
-import play.api.Configuration
-import play.api.mvc.{AbstractController, ControllerComponents}
-
-import scala.concurrent.ExecutionContext
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 
 @Singleton
-class RedirectController @Inject()(configuration: Configuration)(
-  implicit controllerComponents: ControllerComponents,
-  executionContext: ExecutionContext
-) extends AbstractController(controllerComponents) {
+class RedirectController @Inject()
+(implicit controllerComponents: ControllerComponents)
+  extends AbstractController(controllerComponents) {
 
-  def index() = Action { implicit request =>
+  def index(): Action[AnyContent] = Action { implicit request =>
     Redirect("/admin/index.html")
   }
 }

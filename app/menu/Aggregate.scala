@@ -57,8 +57,8 @@ class Aggregate @Inject()(
   def deleteMenu(menu: JsValue): String = {
     val menuUuidStrOpt = (menu \ "uuid").asOpt[String]
     menuUuidStrOpt
-      .fold(ResponseMessage.NO_SUCH_IDENTITY) { menuUuidString =>
-        val menuUuid = UUID.fromString(menuUuidString)
+      .fold(ResponseMessage.NO_SUCH_IDENTITY) { menuUuidStr =>
+        val menuUuid = UUID.fromString(menuUuidStr)
         menuViewService.delete(menuUuid)
 
         val event = Event(
@@ -67,7 +67,7 @@ class Aggregate @Inject()(
         )
         eventService.menuEventBus offer event
 
-        menuUuidString
+        menuUuidStr
       }
   }
 

@@ -2,6 +2,7 @@ package menu
 
 import auth.Auth
 import javax.inject.{Inject, Singleton}
+import play.api.Configuration
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 import utils.ResponseMessage
@@ -12,15 +13,18 @@ import scala.concurrent.{ExecutionContext, Future}
 class CommandController @Inject()(
   auth: Auth,
   aggregate: Aggregate
-)(
-  implicit controllerComponents: ControllerComponents,
+)(implicit
+  controllerComponents: ControllerComponents,
+  configuration: Configuration,
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
+
+   val password = configuration.get[String]("write.password")
 
   def createOrUpdateMenu(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
       for {
-        isAuth <- Future(auth.checkPassword(request.body))
+        isAuth <- Future(auth.checkPassword(request.body, password))
         result <- {
           if (isAuth) {
             Future(aggregate.createOrUpdateMenu(request.body))
@@ -34,7 +38,7 @@ class CommandController @Inject()(
   def deleteMenu(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
       for {
-        isAuth <- Future(auth.checkPassword(request.body))
+        isAuth <- Future(auth.checkPassword(request.body, password))
         result <- {
           if (isAuth) {
             Future(aggregate.deleteMenu(request.body))
@@ -56,7 +60,7 @@ class CommandController @Inject()(
   def createOrUpdateMenuViewSchema(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
       for {
-        isAuth <- Future(auth.checkPassword(request.body))
+        isAuth <- Future(auth.checkPassword(request.body, password))
         result <- {
           if (isAuth) {
             Future(aggregate.createOrUpdateMenuViewSchema(request.body))
