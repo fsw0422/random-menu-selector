@@ -7,8 +7,8 @@ import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponent
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class QueryController @Inject()(menuViewService: MenuViewService)(
-  implicit controllerComponents: ControllerComponents,
+class QueryController @Inject()(menuViewService: MenuViewService)(implicit
+  controllerComponents: ControllerComponents,
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
 
