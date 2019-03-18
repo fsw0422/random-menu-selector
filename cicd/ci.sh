@@ -1,3 +1,3 @@
 #!/bin/bash
 
-sbt ";clean ;scapegoat ;test"
+sbt ";clean ;scapegoat ;coverage ;test ;coverageReport"
