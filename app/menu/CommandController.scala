@@ -1,73 +1,60 @@
 package menu
 
-import auth.Auth
+import java.util.UUID
+
 import javax.inject.{Inject, Singleton}
-import play.api.Configuration
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
-import utils.ResponseMessage
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 @Singleton
-class CommandController @Inject()(
-  auth: Auth,
-  aggregate: Aggregate
-)(implicit
+class CommandController @Inject()(aggregate: Aggregate)(implicit
   controllerComponents: ControllerComponents,
-  configuration: Configuration,
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
 
-   val password = configuration.get[String]("write.password")
-
   def createOrUpdateMenu(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      for {
-        isAuth <- Future(auth.checkPassword(request.body, password))
-        result <- {
-          if (isAuth) {
-            Future(aggregate.createOrUpdateMenu(request.body))
-          } else {
-            Future(ResponseMessage.UNAUTHORIZED)
-          }
+      aggregate.createOrUpdateMenu(request.body)
+        .map {
+          case Left(errorMessage: String) =>
+            Ok(Json.obj("result" -> Json.toJson(errorMessage)))
+          case Right(uuidOpt: Option[UUID]) =>
+            Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
         }
-      } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
     }
 
   def deleteMenu(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      for {
-        isAuth <- Future(auth.checkPassword(request.body, password))
-        result <- {
-          if (isAuth) {
-            Future(aggregate.deleteMenu(request.body))
-          } else {
-            Future(ResponseMessage.UNAUTHORIZED)
-          }
+      aggregate.deleteMenu(request.body)
+        .map {
+          case Left(errorMessage: String) =>
+            Ok(Json.obj("result" -> Json.toJson(errorMessage)))
+          case Right(uuidOpt: Option[UUID]) =>
+            Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
         }
-      } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
     }
 
   def selectRandomMenu(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
       aggregate.selectRandomMenu()
-        .map { result =>
-          Ok(Json.obj("result" -> Json.toJson(result)))
+        .map {
+          case Left(errorMessage: String) =>
+            Ok(Json.obj("result" -> Json.toJson(errorMessage)))
+          case Right(uuidOpt: Option[UUID]) =>
+            Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
         }
     }
 
   def createOrUpdateMenuViewSchema(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      for {
-        isAuth <- Future(auth.checkPassword(request.body, password))
-        result <- {
-          if (isAuth) {
-            Future(aggregate.createOrUpdateMenuViewSchema(request.body))
-          } else {
-            Future(ResponseMessage.UNAUTHORIZED)
-          }
+      aggregate.createOrUpdateMenuViewSchema(request.body)
+        .map {
+          case Left(message: String) =>
+            Ok(Json.obj("result" -> Json.toJson(message)))
+          case Right(_) =>
+            Ok
         }
-      } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
     }
 }

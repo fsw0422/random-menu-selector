@@ -1,8 +1,8 @@
 {
-  "name": "",
+  "name": "hello",
   "ingredients": ["", ""],
-  "recipe": "",
+  "recipe": "hello",
   "link": "",
   "selectedCount": 0,
-  "password": ""
+  "password": "1234"
 }

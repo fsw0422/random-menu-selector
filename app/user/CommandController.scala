@@ -1,13 +1,14 @@
 package user
 
+import java.util.UUID
+
 import auth.Auth
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{AbstractController, Action, ControllerComponents}
-import utils.ResponseMessage
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class CommandController @Inject()(
@@ -19,47 +20,36 @@ class CommandController @Inject()(
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
 
-  val password = configuration.get[String]("write.password")
-
   def createOrUpdateUser(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      for {
-        isAuth <- Future(auth.checkPassword(request.body, password))
-        result <- {
-          if (isAuth) {
-            aggregate.createOrUpdateUser(request.body)
-          } else {
-            Future(ResponseMessage.UNAUTHORIZED)
-          }
+      aggregate.createOrUpdateUser(request.body)
+        .map {
+          case Left(errorMessage: String) =>
+            Ok(Json.obj("result" -> Json.toJson(errorMessage)))
+          case Right(uuidOpt: Option[UUID]) =>
+            Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
         }
-      } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
     }
 
   def deleteUser(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      for {
-        isAuth <- Future(auth.checkPassword(request.body, password))
-        result <- {
-          if (isAuth) {
-            Future(aggregate.deleteUser(request.body))
-          } else {
-            Future(ResponseMessage.UNAUTHORIZED)
-          }
+      aggregate.deleteUser(request.body)
+        .map {
+          case Left(errorMessage: String) =>
+            Ok(Json.obj("result" -> Json.toJson(errorMessage)))
+          case Right(uuidOpt: Option[UUID]) =>
+            Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
         }
-      } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
     }
 
   def createOrUpdateUserViewSchema(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      for {
-        isAuth <- Future(auth.checkPassword(request.body, password))
-        result <- {
-          if (isAuth) {
-            Future(aggregate.createOrUpdateUserViewSchema(request.body))
-          } else {
-            Future(ResponseMessage.UNAUTHORIZED)
-          }
+      aggregate.createOrUpdateUserViewSchema(request.body)
+        .map {
+          case Left(message: String) =>
+            Ok(Json.obj("result" -> Json.toJson(message)))
+          case Right(_) =>
+            Ok
         }
-      } yield Ok(Json.obj("result" -> Json.toJson(result.toString)))
     }
 }
