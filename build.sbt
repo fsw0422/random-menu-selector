@@ -11,12 +11,15 @@ dockerRepository := Some("fsw0422")
 
 scapegoatVersion in ThisBuild := "1.3.8"
 
+scalacOptions += "-Ypartial-unification"
+
 val monocleVersion = "1.4.0"
 val slickVersion = "3.2.3"
 val slickPgVersion = "0.17.0"
 
 libraryDependencies ++= Seq(
   guice,
+  "org.typelevel" %% "cats-core" % "1.6.0",
   "javax.mail" % "mail" % "1.4.7",
   "org.postgresql" % "postgresql" % "42.1.4",
   "com.typesafe.slick" %% "slick" % slickVersion,

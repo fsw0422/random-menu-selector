@@ -89,5 +89,8 @@ class CommandControllerTest extends FlatSpec
     val responseContent = contentAsJson(response)
     val uuid = (responseContent \ "result").as[String]
     uuid should (equal("123e4567-e89b-12d3-a456-426655440000") or equal("223e4567-e89b-12d3-a456-426655440000"))
+
+    And("send emails to all users")
+    // TODO: check invocation of sendmail
   }
 }
