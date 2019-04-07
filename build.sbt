@@ -20,6 +20,7 @@ val slickPgVersion = "0.17.0"
 libraryDependencies ++= Seq(
   guice,
   "org.typelevel" %% "cats-core" % "1.6.0",
+  "org.typelevel" %% "cats-effect" % "1.2.0",
   "javax.mail" % "mail" % "1.4.7",
   "org.postgresql" % "postgresql" % "42.1.4",
   "com.typesafe.slick" %% "slick" % slickVersion,
@@ -29,7 +30,7 @@ libraryDependencies ++= Seq(
   "com.github.tminglei" %% "slick-pg_play-json" % slickPgVersion,
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
   "org.scalatest" %% "scalatest" % "3.0.5" % Test,
-  "org.mockito" %% "mockito-scala" % "1.0.0-beta.7" % Test
+  "org.mockito" %% "mockito-scala" % "1.0.0-beta.7" % Test,
 )
 
 lazy val RandomMenuSelector = (project in file("."))

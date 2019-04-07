@@ -2,12 +2,11 @@ package user
 
 import java.util.UUID
 
+import cats.effect.IO
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import utils.db.Dao
-
-import scala.concurrent.Future
 
 case class UserView(uuid: Option[UUID] = Some(UUID.randomUUID()),
                     name: String,
@@ -28,19 +27,19 @@ object UserView {
 @Singleton
 class UserViewService @Inject()(userViewDao: UserViewDao) {
 
-  def upsert(userView: UserView): Future[Int] = {
+  def upsert(userView: UserView): IO[Int] = {
     userViewDao.upsert(userView)
   }
 
-  def findByEmail(email: String): Future[Seq[UserView]] = {
+  def findByEmail(email: String): IO[Seq[UserView]] = {
     userViewDao.findByEmail(email)
   }
 
-  def findAll(): Future[Seq[UserView]] = {
+  def findAll(): IO[Seq[UserView]] = {
     userViewDao.findAll()
   }
 
-  def delete(uuid: UUID): Future[Int] = {
+  def delete(uuid: UUID): IO[Int] = {
     userViewDao.delete(uuid)
   }
 
@@ -66,28 +65,36 @@ class UserViewDao extends Dao with LazyLogging {
 
   private val userViewTable = TableQuery[UserViewTable]
 
-  def upsert(userView: UserView): Future[Int] = {
-    db.run(userViewTable.insertOrUpdate(userView))
+  def upsert(userView: UserView): IO[Int] = {
+    IO.fromFuture(IO(db.run(userViewTable.insertOrUpdate(userView))))
   }
 
-  def findByEmail(email: String): Future[Seq[UserView]] = {
-    db.run(
-      userViewTable
-        .filter(userView => userView.email === email)
-        .result
-    )
+  def findByEmail(email: String): IO[Seq[UserView]] = {
+    IO.fromFuture {
+      IO {
+        db.run {
+          userViewTable
+            .filter(userView => userView.email === email)
+            .result
+        }
+      }
+    }
   }
 
-  def findAll(): Future[Seq[UserView]] = {
-    db.run(userViewTable.result)
+  def findAll(): IO[Seq[UserView]] = {
+    IO.fromFuture(IO(db.run(userViewTable.result)))
   }
 
-  def delete(uuid: UUID): Future[Int] = {
-    db.run(
-      userViewTable
-        .filter(menuView => menuView.uuid === uuid)
-        .delete
-    )
+  def delete(uuid: UUID): IO[Int] = {
+    IO.fromFuture {
+      IO {
+        db.run {
+          userViewTable
+            .filter(menuView => menuView.uuid === uuid)
+            .delete
+        }
+      }
+    }
   }
 
   def evolve(targetVersion: String): Unit = {

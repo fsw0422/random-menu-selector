@@ -2,6 +2,7 @@ package menu
 
 import java.util.UUID
 
+import cats.effect.IO
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
@@ -34,23 +35,23 @@ object MenuView {
 @Singleton
 class MenuViewService @Inject()(menuViewDao: MenuViewDao) {
 
-  def upsert(menuView: MenuView): Future[Int] = {
+  def upsert(menuView: MenuView): IO[Int] = {
     menuViewDao.upsert(menuView)
   }
 
-  def findByName(name: String): Future[Seq[MenuView]] = {
+  def findByName(name: String): IO[Seq[MenuView]] = {
     menuViewDao.findByName(name)
   }
 
-  def findByNameLike(name: String): Future[Seq[MenuView]] = {
+  def findByNameLike(name: String): IO[Seq[MenuView]] = {
     menuViewDao.findByNameLike(name)
   }
 
-  def findAll(): Future[Seq[MenuView]] = {
+  def findAll(): IO[Seq[MenuView]] = {
     menuViewDao.findAll()
   }
 
-  def delete(uuid: UUID): Future[Int] = {
+  def delete(uuid: UUID): IO[Int] = {
     menuViewDao.delete(uuid)
   }
 
@@ -79,36 +80,48 @@ class MenuViewDao extends Dao with LazyLogging {
 
   private val menuViewTable = TableQuery[MenuViewTable]
 
-  def upsert(menuView: MenuView): Future[Int] = {
-    db.run(menuViewTable.insertOrUpdate(menuView))
+  def upsert(menuView: MenuView): IO[Int] = {
+    IO.fromFuture(IO(db.run(menuViewTable.insertOrUpdate(menuView))))
   }
 
-  def findByName(name: String): Future[Seq[MenuView]] = {
-    db.run(
-      menuViewTable
-        .filter(menuView => menuView.name === name)
-        .result
-    )
+  def findByName(name: String): IO[Seq[MenuView]] = {
+    IO.fromFuture {
+      IO {
+        db.run {
+          menuViewTable
+            .filter(menuView => menuView.name === name)
+            .result
+        }
+      }
+    }
   }
 
-  def findByNameLike(name: String): Future[Seq[MenuView]] = {
-    db.run(
-      menuViewTable
-        .filter(menuView => menuView.name like "%" + name + "%")
-        .result
-    )
+  def findByNameLike(name: String): IO[Seq[MenuView]] = {
+    IO.fromFuture {
+      IO {
+        db.run {
+          menuViewTable
+            .filter(menuView => menuView.name like "%" + name + "%")
+            .result
+        }
+      }
+    }
   }
 
-  def findAll(): Future[Seq[MenuView]] = {
-    db.run(menuViewTable.result)
+  def findAll(): IO[Seq[MenuView]] = {
+    IO.fromFuture(IO(db.run(menuViewTable.result)))
   }
 
-  def delete(uuid: UUID): Future[Int] = {
-    db.run(
+  def delete(uuid: UUID): IO[Int] = {
+    IO.fromFuture {
+      IO {
+        db.run {
       menuViewTable
         .filter(menuView => menuView.uuid === uuid)
         .delete
-    )
+        }
+      }
+    }
   }
 
   def evolve(targetVersion: String): Unit = {

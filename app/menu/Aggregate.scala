@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import auth.Auth
 import cats.data.OptionT
-import cats.implicits._
+import cats.effect.IO
 import com.typesafe.config.Config
 import event.{Event, EventService, EventType}
 import javax.inject.{Inject, Singleton}
@@ -34,14 +34,14 @@ class Aggregate @Inject()(
 
   val password = config.getString("write.password")
 
-  def createOrUpdateMenu(menu: JsValue): Future[Either[String, Option[UUID]]] =
+  def createOrUpdateMenu(menu: JsValue): IO[Either[String, Option[UUID]]] =
     auth.checkPassword(menu, password) { isAuth =>
       if (!isAuth) {
-        Future(Left(ErrorResponseMessage.UNAUTHORIZED))
+        IO(Left(ErrorResponseMessage.UNAUTHORIZED))
       } else {
         val targetMenuViewOpt = menu.asOpt[MenuView]
         val result = for {
-          targetMenuView <- OptionT.fromOption[Future](targetMenuViewOpt)
+          targetMenuView <- OptionT.fromOption[IO](targetMenuViewOpt)
           menuViews <- OptionT.liftF(menuViewService.findByName(targetMenuView.name))
         } yield {
           val updatedMenuView = menuViews.headOption
@@ -67,9 +67,9 @@ class Aggregate @Inject()(
     }
   }
 
-  def deleteMenu(menuUuid: JsValue): Future[Either[String, Option[UUID]]] =
+  def deleteMenu(menuUuid: JsValue): IO[Either[String, Option[UUID]]] =
     auth.checkPassword(menuUuid, password) { isAuth =>
-      Future {
+      IO {
         if (!isAuth) {
           Left(ErrorResponseMessage.UNAUTHORIZED)
         } else {
@@ -95,13 +95,13 @@ class Aggregate @Inject()(
       }
   }
 
-  def selectRandomMenu(): Future[Either[String, Option[UUID]]] = {
+  def selectRandomMenu(): IO[Either[String, Option[UUID]]] = {
     val result = for {
       menuViews <- OptionT.liftF(menuViewService.findAll())
       userViews <- OptionT.liftF(userViewService.findAll())
-      randomMenuView <- OptionT.fromOption[Future](Random.shuffle(menuViews).headOption)
+      randomMenuView <- OptionT.fromOption[IO](Random.shuffle(menuViews).headOption)
       selectedMenuViews <- OptionT.liftF(menuViewService.findByName(randomMenuView.name))
-      selectedMenu <- OptionT.fromOption[Future](selectedMenuViews.headOption)
+      selectedMenu <- OptionT.fromOption[IO](selectedMenuViews.headOption)
     } yield {
       val updatedSelectedMenuView = selectedMenu.copy(
         selectedCount = selectedMenu.selectedCount
@@ -125,9 +125,9 @@ class Aggregate @Inject()(
       .map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
   }
 
-  def createOrUpdateMenuViewSchema(version: JsValue): Future[Either[String, Unit]] =
+  def createOrUpdateMenuViewSchema(version: JsValue): IO[Either[String, Unit]] =
     auth.checkPassword(version, password) { isAuth =>
-      Future {
+      IO {
         if (!isAuth) {
           Left(ErrorResponseMessage.UNAUTHORIZED)
         } else {

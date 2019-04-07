@@ -18,5 +18,6 @@ class QueryController @Inject()(userViewService: UserViewService)(implicit
         .map { userViews =>
           Ok(Json.obj("result" -> Json.toJson(userViews)))
         }
+        .unsafeToFuture()
     }
 }
