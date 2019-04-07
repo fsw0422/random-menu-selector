@@ -5,6 +5,7 @@ import java.util.UUID
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
+import cats.effect.IO
 import com.typesafe.scalalogging.LazyLogging
 import event.EventType.EventType
 import javax.inject.{Inject, Singleton}
@@ -13,8 +14,6 @@ import org.joda.time.DateTime
 import play.api.libs.json.JsValue
 import user.{UserView, UserViewService}
 import utils.db.{Dao, ViewDatabase}
-
-import scala.concurrent.Future
 
 object EventType extends Enumeration {
   type EventType = Value
@@ -138,24 +137,32 @@ class EventDao extends Dao with LazyLogging {
 
   private val eventTable = TableQuery[EventTable]
 
-  def insert(event: Event): Future[Int] = {
-    db.run(eventTable += event)
+  def insert(event: Event): IO[Int] = {
+    IO.fromFuture(IO(db.run(eventTable += event)))
   }
 
-  def findByTimeStamp(startTime: DateTime): Future[Seq[Event]] = {
-    db.run(
-      eventTable
-        .filter(event => event.timestamp >= startTime)
-        .result
-    )
+  def findByTimeStamp(startTime: DateTime): IO[Seq[Event]] = {
+    IO.fromFuture {
+      IO {
+        db.run {
+          eventTable
+            .filter(event => event.timestamp >= startTime)
+            .result
+        }
+      }
+    }
   }
 
-  def findByType(`type`: EventType): Future[Seq[Event]] = {
-    db.run(
-      eventTable
-        .filter(event => event.`type` === `type`)
-        .result
-    )
+  def findByType(`type`: EventType): IO[Seq[Event]] = {
+    IO.fromFuture {
+      IO {
+        db.run {
+          eventTable
+            .filter(event => event.`type` === `type`)
+            .result
+        }
+      }
+    }
   }
 
   // Initial creation of Event table

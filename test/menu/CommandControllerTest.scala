@@ -2,6 +2,7 @@ package menu
 
 import java.util.UUID
 
+import cats.effect.IO
 import event.EventDao
 import org.junit.runner.RunWith
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
@@ -15,8 +16,6 @@ import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import user.{UserView, UserViewDao}
 import utils.EmailSender
-
-import scala.concurrent.Future
 
 @RunWith(classOf[JUnitRunner])
 class CommandControllerTest extends FlatSpec
@@ -62,17 +61,17 @@ class CommandControllerTest extends FlatSpec
       "pearLink"
     )
     when(menuViewDaoMock.findAll())
-      .thenReturn(Future(Seq(applePieView, pearPieView)))
+      .thenReturn(IO(Seq(applePieView, pearPieView)))
     when(menuViewDaoMock.findByName(any[String]))
-      .thenReturn(Future(Seq(applePieView)))
+      .thenReturn(IO(Seq(applePieView)))
 
     And("a default user James")
     val userUuid = UUID.fromString("124e4567-e89b-12d3-a456-426655440000")
     val userView = UserView(Some(userUuid), "james", "james@email.com")
     when(userViewDaoMock.findAll())
-      .thenReturn(Future(Seq(userView)))
+      .thenReturn(IO(Seq(userView)))
     when(userViewDaoMock.findByEmail(any[String]))
-      .thenReturn(Future(Seq(userView)))
+      .thenReturn(IO(Seq(userView)))
 
     When("request a POST request for random menu")
     val Some(response) = route(

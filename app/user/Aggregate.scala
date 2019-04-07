@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import auth.Auth
 import cats.data.OptionT
-import cats.implicits._
+import cats.effect.IO
 import com.typesafe.config.Config
 import event.{Event, EventService, EventType}
 import javax.inject.{Inject, Singleton}
@@ -30,14 +30,14 @@ class Aggregate @Inject()(
 
   val password = config.getString("write.password")
 
-  def createOrUpdateUser(user: JsValue): Future[Either[String, Option[UUID]]] = {
+  def createOrUpdateUser(user: JsValue): IO[Either[String, Option[UUID]]] = {
     auth.checkPassword(user, password) { isAuth =>
       if (!isAuth) {
-        Future(Left(ErrorResponseMessage.UNAUTHORIZED))
+        IO(Left(ErrorResponseMessage.UNAUTHORIZED))
       } else {
         val targetUserViewOpt = user.asOpt[UserView]
         val result = for {
-          targetUserView <- OptionT.fromOption[Future](targetUserViewOpt)
+          targetUserView <- OptionT.fromOption[IO](targetUserViewOpt)
           userViews <- OptionT.liftF(userViewService.findByEmail(targetUserView.email))
         } yield {
           val updatedUserView = userViews.headOption
@@ -62,9 +62,9 @@ class Aggregate @Inject()(
     }
   }
 
-  def deleteUser(user: JsValue): Future[Either[String, Option[UUID]]] = {
+  def deleteUser(user: JsValue): IO[Either[String, Option[UUID]]] = {
     auth.checkPassword(user, password) { isAuth =>
-      Future {
+      IO {
         if (!isAuth) {
           Left(ErrorResponseMessage.UNAUTHORIZED)
         } else {
@@ -91,9 +91,9 @@ class Aggregate @Inject()(
     }
   }
 
-  def createOrUpdateUserViewSchema(version: JsValue): Future[Either[String, Unit]] = {
+  def createOrUpdateUserViewSchema(version: JsValue): IO[Either[String, Unit]] = {
     auth.checkPassword(version, password) { isAuth =>
-      Future {
+      IO {
         if (!isAuth) {
           Left(ErrorResponseMessage.UNAUTHORIZED)
         } else {

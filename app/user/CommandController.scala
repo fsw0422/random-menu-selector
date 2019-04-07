@@ -29,6 +29,7 @@ class CommandController @Inject()(
           case Right(uuidOpt: Option[UUID]) =>
             Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
         }
+        .unsafeToFuture()
     }
 
   def deleteUser(): Action[JsValue] =
@@ -40,6 +41,7 @@ class CommandController @Inject()(
           case Right(uuidOpt: Option[UUID]) =>
             Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
         }
+        .unsafeToFuture()
     }
 
   def createOrUpdateUserViewSchema(): Action[JsValue] =
@@ -51,5 +53,6 @@ class CommandController @Inject()(
           case Right(_) =>
             Ok
         }
+        .unsafeToFuture()
     }
 }

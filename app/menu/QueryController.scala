@@ -18,5 +18,6 @@ class QueryController @Inject()(menuViewService: MenuViewService)(implicit
         .map { menuViews =>
           Ok(Json.obj("result" -> Json.toJson(menuViews)))
         }
+        .unsafeToFuture()
     }
 }

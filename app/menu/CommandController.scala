@@ -23,6 +23,7 @@ class CommandController @Inject()(aggregate: Aggregate)(implicit
           case Right(uuidOpt: Option[UUID]) =>
             Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
         }
+        .unsafeToFuture()
     }
 
   def deleteMenu(): Action[JsValue] =
@@ -34,6 +35,7 @@ class CommandController @Inject()(aggregate: Aggregate)(implicit
           case Right(uuidOpt: Option[UUID]) =>
             Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
         }
+        .unsafeToFuture()
     }
 
   def selectRandomMenu(): Action[JsValue] =
@@ -45,6 +47,7 @@ class CommandController @Inject()(aggregate: Aggregate)(implicit
           case Right(uuidOpt: Option[UUID]) =>
             Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
         }
+        .unsafeToFuture()
     }
 
   def createOrUpdateMenuViewSchema(): Action[JsValue] =
@@ -56,5 +59,6 @@ class CommandController @Inject()(aggregate: Aggregate)(implicit
           case Right(_) =>
             Ok
         }
+        .unsafeToFuture()
     }
 }
