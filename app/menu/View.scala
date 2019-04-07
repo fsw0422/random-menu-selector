@@ -8,8 +8,6 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
 import utils.db.Dao
 
-import scala.concurrent.Future
-
 case class MenuView(uuid: Option[UUID] = Some(UUID.randomUUID()),
                     name: String,
                     ingredients: Seq[String],
@@ -116,9 +114,9 @@ class MenuViewDao extends Dao with LazyLogging {
     IO.fromFuture {
       IO {
         db.run {
-      menuViewTable
-        .filter(menuView => menuView.uuid === uuid)
-        .delete
+          menuViewTable
+            .filter(menuView => menuView.uuid === uuid)
+            .delete
         }
       }
     }

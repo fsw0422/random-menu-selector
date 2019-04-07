@@ -156,11 +156,11 @@ class EventDao extends Dao with LazyLogging {
   def findByType(`type`: EventType): IO[Seq[Event]] = {
     IO.fromFuture {
       IO {
-        db.run(
+        db.run {
           eventTable
             .filter(event => event.`type` === `type`)
             .result
-        )
+        }
       }
     }
   }
