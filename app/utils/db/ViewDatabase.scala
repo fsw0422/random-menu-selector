@@ -1,5 +1,6 @@
 package utils.db
 
+import cats.effect.IO
 import com.typesafe.scalalogging.LazyLogging
 import event.{Event, EventDao}
 import javax.inject.{Inject, Singleton}
@@ -18,27 +19,25 @@ class ViewDatabase @Inject()(eventDao: EventDao) extends LazyLogging {
     * @param event The incoming event specifying what version of schema to apply
     * @param action The action that needs to be fed
     */
-  def viewVersionNonExistAction(event: Event)(action: String => Unit)
-    (implicit executionContext: ExecutionContext): Unit = {
-    event.data
-      .fold(logger.warn(s"[$event] is None")) { eventData =>
-        val targetVersion = (eventData \ "version").as[String]
-        eventDao.findByType(event.`type`)
-          .map { storedEvents =>
-            val targetVersionCount = storedEvents.count { storedEvent =>
-              storedEvent.data
-                .fold(false) { storedEventData =>
-                  val eventVersion = (storedEventData \ "version").as[String]
-                  targetVersion == eventVersion
-                }
-            }
+  def viewVersionNonExistAction(event: Event)
+    (action: String => IO[Any])
+    (implicit executionContext: ExecutionContext): IO[Unit] = IO {
+    event.data.fold(logger.warn(s"[$event] is None")) { eventData =>
+      val targetVersion = (eventData \ "version").as[String]
+      eventDao.findByType(event.`type`).map { storedEvents =>
+        val targetVersionCount = storedEvents.count { storedEvent =>
+          storedEvent.data.fold(false) { storedEventData =>
+            val eventVersion = (storedEventData \ "version").as[String]
+            targetVersion == eventVersion
+          }
+        }
 
-            if (targetVersionCount == 1) {
-              action.apply(targetVersion)
-            } else {
-              logger.warn(s"View version $targetVersion already exists")
-            }
+        if (targetVersionCount == 1) {
+          action.apply(targetVersion)
+        } else {
+          logger.warn(s"View version $targetVersion already exists")
         }
       }
+    }
   }
 }

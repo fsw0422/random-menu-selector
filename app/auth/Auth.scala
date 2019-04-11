@@ -13,8 +13,9 @@ class Auth {
     (action: Boolean => IO[Either[String, R]])
     (implicit executionContext: ExecutionContext): IO[Either[String, R]] = {
     val attemptedPasswordOpt = (requestBody \ "password").asOpt[String]
-    val isAuth = attemptedPasswordOpt
-      .fold(false)(attemptedPassword => attemptedPassword == password)
+    val isAuth = attemptedPasswordOpt.fold(false) { attemptedPassword =>
+      attemptedPassword == password
+    }
     action.apply(isAuth)
   }
 }

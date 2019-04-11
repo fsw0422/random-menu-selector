@@ -2,6 +2,7 @@ package user
 
 import java.util.UUID
 
+import akka.stream.QueueOfferResult
 import auth.Auth
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
@@ -22,37 +23,31 @@ class CommandController @Inject()(
 
   def createOrUpdateUser(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      aggregate.createOrUpdateUser(request.body)
-        .map {
-          case Left(errorMessage: String) =>
-            Ok(Json.obj("result" -> Json.toJson(errorMessage)))
-          case Right(uuidOpt: Option[UUID]) =>
-            Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
-        }
-        .unsafeToFuture()
+      aggregate.createOrUpdateUser(request.body).map {
+        case Left(errorMessage: String) =>
+          Ok(Json.obj("result" -> Json.toJson(errorMessage)))
+        case Right(uuidOpt: Option[UUID]) =>
+          Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
+      }.unsafeToFuture()
     }
 
   def deleteUser(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      aggregate.deleteUser(request.body)
-        .map {
-          case Left(errorMessage: String) =>
-            Ok(Json.obj("result" -> Json.toJson(errorMessage)))
-          case Right(uuidOpt: Option[UUID]) =>
-            Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
-        }
-        .unsafeToFuture()
+      aggregate.deleteUser(request.body).map {
+        case Left(errorMessage: String) =>
+          Ok(Json.obj("result" -> Json.toJson(errorMessage)))
+        case Right(uuidOpt: Option[UUID]) =>
+          Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
+      }.unsafeToFuture()
     }
 
   def createOrUpdateUserViewSchema(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      aggregate.createOrUpdateUserViewSchema(request.body)
-        .map {
-          case Left(message: String) =>
-            Ok(Json.obj("result" -> Json.toJson(message)))
-          case Right(_) =>
-            Ok
-        }
-        .unsafeToFuture()
+      aggregate.createOrUpdateUserViewSchema(request.body).map {
+        case Left(message: String) =>
+          Ok(Json.obj("result" -> Json.toJson(message)))
+        case Right(queueOfferResult: QueueOfferResult) =>
+          Ok(Json.obj("result" -> Json.toJson(queueOfferResult.toString)))
+      }.unsafeToFuture()
     }
 }

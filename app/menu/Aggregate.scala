@@ -3,7 +3,7 @@ package menu
 import java.util.UUID
 
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, QueueOfferResult}
 import auth.Auth
 import cats.data.OptionT
 import cats.effect.IO
@@ -14,18 +14,16 @@ import play.api.libs.json.{JsValue, Json}
 import user.{UserView, UserViewService}
 import utils.{Email, EmailSender, ErrorResponseMessage}
 
-import scala.concurrent.Future
 import scala.util.Random
 
 @Singleton
-class Aggregate @Inject()(
-  config: Config,
+class Aggregate @Inject()
+(config: Config,
   emailSender: EmailSender,
   eventService: EventService,
   auth: Auth,
   menuViewService: MenuViewService,
-  userViewService: UserViewService
-) {
+  userViewService: UserViewService) {
 
   private implicit val actorSystem = ActorSystem("MenuAggregate")
   private implicit val executionContext = actorSystem.dispatcher
@@ -37,22 +35,21 @@ class Aggregate @Inject()(
   def createOrUpdateMenu(menu: JsValue): IO[Either[String, Option[UUID]]] =
     auth.checkPassword(menu, password) { isAuth =>
       if (!isAuth) {
-        IO(Left(ErrorResponseMessage.UNAUTHORIZED))
+        IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
       } else {
         val targetMenuViewOpt = menu.asOpt[MenuView]
         val result = for {
           targetMenuView <- OptionT.fromOption[IO](targetMenuViewOpt)
           menuViews <- OptionT.liftF(menuViewService.findByName(targetMenuView.name))
         } yield {
-          val updatedMenuView = menuViews.headOption
-            .fold(targetMenuView) { menuView =>
-              menuView.copy(
-                name = targetMenuView.name,
-                ingredients = targetMenuView.ingredients,
-                recipe = targetMenuView.recipe,
-                link = targetMenuView.link
-              )
-            }
+          val updatedMenuView = menuViews.headOption.fold(targetMenuView) { menuView =>
+            menuView.copy(
+              name = targetMenuView.name,
+              ingredients = targetMenuView.ingredients,
+              recipe = targetMenuView.recipe,
+              link = targetMenuView.link
+            )
+          }
 
           val event = Event(
             `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
@@ -62,10 +59,9 @@ class Aggregate @Inject()(
 
           Right(updatedMenuView.uuid)
         }
-        result.value
-          .map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
+        result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
+      }
     }
-  }
 
   def deleteMenu(menuUuid: JsValue): IO[Either[String, Option[UUID]]] =
     auth.checkPassword(menuUuid, password) { isAuth =>
@@ -76,24 +72,23 @@ class Aggregate @Inject()(
           val targetMenuUuidStrOpt = (menuUuid \ "uuid").asOpt[String]
           Either.cond(
             targetMenuUuidStrOpt.isDefined,
-            targetMenuUuidStrOpt
-              .map { targetMenuUuidStr =>
-                val menuUuid = UUID.fromString(targetMenuUuidStr)
-                menuViewService.delete(menuUuid)
+            targetMenuUuidStrOpt.map { targetMenuUuidStr =>
+              val menuUuid = UUID.fromString(targetMenuUuidStr)
+              menuViewService.delete(menuUuid)
 
-                val event = Event(
-                  `type` = EventType.MENU_PROFILE_DELETED,
-                  data = Some(Json.toJson(menuUuid)),
-                )
-                eventService.menuEventBus offer event
+              val event = Event(
+                `type` = EventType.MENU_PROFILE_DELETED,
+                data = Some(Json.toJson(menuUuid)),
+              )
+              eventService.menuEventBus offer event
 
-                menuUuid
-              },
+              menuUuid
+            },
             ErrorResponseMessage.NO_SUCH_IDENTITY
           )
         }
       }
-  }
+    }
 
   def selectRandomMenu(): IO[Either[String, Option[UUID]]] = {
     val result = for {
@@ -104,8 +99,7 @@ class Aggregate @Inject()(
       selectedMenu <- OptionT.fromOption[IO](selectedMenuViews.headOption)
     } yield {
       val updatedSelectedMenuView = selectedMenu.copy(
-        selectedCount = selectedMenu.selectedCount
-          .map(_ + 1)
+        selectedCount = selectedMenu.selectedCount.map(_ + 1)
       )
 
       val event = Event(
@@ -121,24 +115,20 @@ class Aggregate @Inject()(
         Right(None)
       }
     }
-    result.value
-      .map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
+    result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
   }
 
-  def createOrUpdateMenuViewSchema(version: JsValue): IO[Either[String, Unit]] =
+  def createOrUpdateMenuViewSchema(version: JsValue): IO[Either[String, QueueOfferResult]] =
     auth.checkPassword(version, password) { isAuth =>
-      IO {
-        if (!isAuth) {
-          Left(ErrorResponseMessage.UNAUTHORIZED)
-        } else {
-          val event = Event(`type` = EventType.MENU_SCHEMA_EVOLVED, data = Some(version))
-          eventService.menuEventBus offer event
-          Right()
-        }
+      if (!isAuth) {
+        IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
+      } else {
+        val event = Event(`type` = EventType.MENU_SCHEMA_EVOLVED, data = Some(version))
+        IO.fromFuture(IO((eventService.menuEventBus offer event).map(Right(_))))
       }
-  }
+    }
 
-  private def sendEmail(menu: MenuView, users: Seq[UserView]): Unit = {
+  private def sendEmail(menu: MenuView, users: Seq[UserView]): IO[Unit] = {
     emailSender.send(
       "smtp.gmail.com",
       "465",

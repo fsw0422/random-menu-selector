@@ -2,6 +2,7 @@ package utils
 
 import java.util.{Date, Properties}
 
+import cats.effect.IO
 import javax.inject.Singleton
 import javax.mail.internet.{InternetAddress, MimeMessage}
 import javax.mail.{Address, Message, Session}
@@ -17,7 +18,7 @@ class EmailSender {
            smtpPassword: String,
            from: String,
            encoding: String,
-           emailDescription: Email): Unit = {
+           emailDescription: Email): IO[Unit] = IO {
     val props = new Properties()
     props.put("mail.smtps.host", smtpHost)
     props.put("mail.smtps.port", smtpPort)
@@ -29,11 +30,10 @@ class EmailSender {
 
     val message = new MimeMessage(session)
     message.setFrom(new InternetAddress(from))
-    val to = emailDescription.emails
-      .map { email =>
-        val address: Address = new InternetAddress(email)
-        address
-      }
+    val to = emailDescription.emails.map { email =>
+      val address: Address = new InternetAddress(email)
+      address
+    }
     message.setRecipients(Message.RecipientType.TO, to)
     message.setSentDate(new Date())
     message.setSubject(emailDescription.subject, encoding)
