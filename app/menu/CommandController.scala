@@ -15,7 +15,7 @@ class CommandController @Inject()(aggregate: Aggregate)(implicit
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
 
-  def createOrUpdateMenu(): Action[JsValue] =
+  def createOrUpdateMenu(): Action[JsValue] = {
     Action.async(parse.json) { implicit request =>
       aggregate.createOrUpdateMenu(request.body).map {
         case Left(errorMessage: String) =>
@@ -24,8 +24,9 @@ class CommandController @Inject()(aggregate: Aggregate)(implicit
           Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
       }.unsafeToFuture()
     }
+  }
 
-  def deleteMenu(): Action[JsValue] =
+  def deleteMenu(): Action[JsValue] = {
     Action.async(parse.json) { implicit request =>
       aggregate.deleteMenu(request.body).map {
         case Left(errorMessage: String) =>
@@ -34,8 +35,9 @@ class CommandController @Inject()(aggregate: Aggregate)(implicit
           Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
       }.unsafeToFuture()
     }
+  }
 
-  def selectRandomMenu(): Action[JsValue] =
+  def selectRandomMenu(): Action[JsValue] = {
     Action.async(parse.json) { implicit request =>
       aggregate.selectRandomMenu().map {
         case Left(errorMessage: String) =>
@@ -44,8 +46,9 @@ class CommandController @Inject()(aggregate: Aggregate)(implicit
           Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
       }.unsafeToFuture()
     }
+  }
 
-  def createOrUpdateMenuViewSchema(): Action[JsValue] =
+  def createOrUpdateMenuViewSchema(): Action[JsValue] = {
     Action.async(parse.json) { implicit request =>
       aggregate.createOrUpdateMenuViewSchema(request.body).map {
         case Left(message: String) =>
@@ -54,4 +57,5 @@ class CommandController @Inject()(aggregate: Aggregate)(implicit
           Ok(Json.obj("result" -> Json.toJson(queueOfferResult.toString)))
       }.unsafeToFuture()
     }
+  }
 }

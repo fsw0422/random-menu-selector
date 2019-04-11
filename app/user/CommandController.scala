@@ -21,7 +21,7 @@ class CommandController @Inject()(
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
 
-  def createOrUpdateUser(): Action[JsValue] =
+  def createOrUpdateUser(): Action[JsValue] = {
     Action.async(parse.json) { implicit request =>
       aggregate.createOrUpdateUser(request.body).map {
         case Left(errorMessage: String) =>
@@ -30,8 +30,9 @@ class CommandController @Inject()(
           Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
       }.unsafeToFuture()
     }
+  }
 
-  def deleteUser(): Action[JsValue] =
+  def deleteUser(): Action[JsValue] = {
     Action.async(parse.json) { implicit request =>
       aggregate.deleteUser(request.body).map {
         case Left(errorMessage: String) =>
@@ -40,8 +41,9 @@ class CommandController @Inject()(
           Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
       }.unsafeToFuture()
     }
+  }
 
-  def createOrUpdateUserViewSchema(): Action[JsValue] =
+  def createOrUpdateUserViewSchema(): Action[JsValue] = {
     Action.async(parse.json) { implicit request =>
       aggregate.createOrUpdateUserViewSchema(request.body).map {
         case Left(message: String) =>
@@ -50,4 +52,5 @@ class CommandController @Inject()(
           Ok(Json.obj("result" -> Json.toJson(queueOfferResult.toString)))
       }.unsafeToFuture()
     }
+  }
 }

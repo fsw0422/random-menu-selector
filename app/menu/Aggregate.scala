@@ -17,13 +17,14 @@ import utils.{Email, EmailSender, ErrorResponseMessage}
 import scala.util.Random
 
 @Singleton
-class Aggregate @Inject()
-(config: Config,
+class Aggregate @Inject()(
+  config: Config,
   emailSender: EmailSender,
   eventService: EventService,
   auth: Auth,
   menuViewService: MenuViewService,
-  userViewService: UserViewService) {
+  userViewService: UserViewService
+) {
 
   private implicit val actorSystem = ActorSystem("MenuAggregate")
   private implicit val executionContext = actorSystem.dispatcher
@@ -32,7 +33,7 @@ class Aggregate @Inject()
 
   val password = config.getString("write.password")
 
-  def createOrUpdateMenu(menu: JsValue): IO[Either[String, Option[UUID]]] =
+  def createOrUpdateMenu(menu: JsValue): IO[Either[String, Option[UUID]]] = {
     auth.checkPassword(menu, password) { isAuth =>
       if (!isAuth) {
         IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
@@ -62,14 +63,15 @@ class Aggregate @Inject()
         result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
       }
     }
+  }
 
-  def deleteMenu(menuUuid: JsValue): IO[Either[String, Option[UUID]]] =
+  def deleteMenu(menuUuid: JsValue): IO[Either[String, Option[UUID]]] = {
     auth.checkPassword(menuUuid, password) { isAuth =>
-      IO {
-        if (!isAuth) {
-          Left(ErrorResponseMessage.UNAUTHORIZED)
-        } else {
-          val targetMenuUuidStrOpt = (menuUuid \ "uuid").asOpt[String]
+      if (!isAuth) {
+        IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
+      } else {
+        val targetMenuUuidStrOpt = (menuUuid \ "uuid").asOpt[String]
+        IO {
           Either.cond(
             targetMenuUuidStrOpt.isDefined,
             targetMenuUuidStrOpt.map { targetMenuUuidStr =>
@@ -89,6 +91,7 @@ class Aggregate @Inject()
         }
       }
     }
+  }
 
   def selectRandomMenu(): IO[Either[String, Option[UUID]]] = {
     val result = for {
@@ -118,7 +121,7 @@ class Aggregate @Inject()
     result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
   }
 
-  def createOrUpdateMenuViewSchema(version: JsValue): IO[Either[String, QueueOfferResult]] =
+  def createOrUpdateMenuViewSchema(version: JsValue): IO[Either[String, QueueOfferResult]] = {
     auth.checkPassword(version, password) { isAuth =>
       if (!isAuth) {
         IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
@@ -127,6 +130,7 @@ class Aggregate @Inject()
         IO.fromFuture(IO((eventService.menuEventBus offer event).map(Right(_))))
       }
     }
+  }
 
   private def sendEmail(menu: MenuView, users: Seq[UserView]): IO[Unit] = {
     emailSender.send(

@@ -12,10 +12,11 @@ class QueryController @Inject()(menuViewService: MenuViewService)(implicit
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
 
-  def getMenusByNameLike(name: String): Action[AnyContent] =
+  def getMenusByNameLike(name: String): Action[AnyContent] = {
     Action.async { implicit request =>
       menuViewService.findByNameLike(name).map { menuViews =>
         Ok(Json.obj("result" -> Json.toJson(menuViews)))
       }.unsafeToFuture()
     }
+  }
 }

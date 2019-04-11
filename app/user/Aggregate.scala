@@ -28,7 +28,7 @@ class Aggregate @Inject()(
 
   val password = config.getString("write.password")
 
-  def createOrUpdateUser(user: JsValue): IO[Either[String, Option[UUID]]] =
+  def createOrUpdateUser(user: JsValue): IO[Either[String, Option[UUID]]] = {
     auth.checkPassword(user, password) { isAuth =>
       if (!isAuth) {
         IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
@@ -56,14 +56,15 @@ class Aggregate @Inject()(
         result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
       }
     }
+  }
 
-  def deleteUser(user: JsValue): IO[Either[String, Option[UUID]]] =
+  def deleteUser(user: JsValue): IO[Either[String, Option[UUID]]] = {
     auth.checkPassword(user, password) { isAuth =>
-      IO {
-        if (!isAuth) {
-          Left(ErrorResponseMessage.UNAUTHORIZED)
-        } else {
-          val userUuidStrOpt = (user \ "uuid").asOpt[String]
+      if (!isAuth) {
+        IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
+      } else {
+        val userUuidStrOpt = (user \ "uuid").asOpt[String]
+        IO {
           Either.cond(
             userUuidStrOpt.isDefined,
             userUuidStrOpt.map { userUuidStr =>
@@ -82,9 +83,10 @@ class Aggregate @Inject()(
           )
         }
       }
+    }
   }
 
-  def createOrUpdateUserViewSchema(version: JsValue): IO[Either[String, QueueOfferResult]] =
+  def createOrUpdateUserViewSchema(version: JsValue): IO[Either[String, QueueOfferResult]] = {
     auth.checkPassword(version, password) { isAuth =>
       if (!isAuth) {
         IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
@@ -93,4 +95,5 @@ class Aggregate @Inject()(
         IO.fromFuture(IO((eventService.userEventBus offer event).map(Right(_))))
       }
     }
+  }
 }
