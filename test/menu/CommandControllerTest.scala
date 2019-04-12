@@ -3,6 +3,7 @@ package menu
 import java.util.UUID
 
 import cats.effect.IO
+import com.dimafeng.testcontainers.{FixedHostPortGenericContainer, ForAllTestContainer}
 import event.EventDao
 import org.junit.runner.RunWith
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
@@ -23,7 +24,8 @@ class CommandControllerTest extends FlatSpec
     with ArgumentMatchersSugar
     with GivenWhenThen
     with Matchers
-    with Results {
+    with Results
+    with ForAllTestContainer {
 
   private val emailSenderMock = mock[EmailSender]
   private val eventDaoMock = mock[EventDao]
@@ -39,6 +41,12 @@ class CommandControllerTest extends FlatSpec
     )
     .build
   private implicit val dispatcher = mockedApp.actorSystem.dispatcher
+
+  override val container = FixedHostPortGenericContainer(
+    "postgres:9",
+    exposedHostPort = 80,
+    exposedContainerPort = 80
+  )
 
   behavior of "POST request to /menu/random endpoint"
 
