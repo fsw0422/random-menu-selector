@@ -44,8 +44,9 @@ class EventService @Inject()(
   val menuEventBus = eventStream(5) { event =>
     event.`type` match {
       case EventType.RANDOM_MENU_ASKED |
-          EventType.MENU_PROFILE_CREATED_OR_UPDATED |
-          EventType.MENU_PROFILE_DELETED | EventType.MENU_SCHEMA_EVOLVED =>
+           EventType.MENU_PROFILE_CREATED_OR_UPDATED |
+           EventType.MENU_PROFILE_DELETED |
+           EventType.MENU_SCHEMA_EVOLVED =>
         eventDao.insert(event)
       case _ =>
         logger.error(s"No such event type [${event.`type`}]")
@@ -54,20 +55,18 @@ class EventService @Inject()(
   } { event =>
     event.`type` match {
       case EventType.RANDOM_MENU_ASKED |
-          EventType.MENU_PROFILE_CREATED_OR_UPDATED =>
-        event.data
-          .fold(logger.warn(s"[$event] is None")) { menuViewJson =>
-            menuViewService.upsert(menuViewJson.as[MenuView])
-          }
+           EventType.MENU_PROFILE_CREATED_OR_UPDATED =>
+        event.data.fold(logger.warn(s"[$event] is None")) { menuViewJson =>
+          menuViewService.upsert(menuViewJson.as[MenuView])
+        }
       case EventType.MENU_PROFILE_DELETED =>
-        event.data
-          .fold(logger.warn(s"[$event] is None")) { menuUuidJson =>
-            menuViewService.delete(menuUuidJson.as[UUID])
-          }
+        event.data.fold(logger.warn(s"[$event] is None")) { menuUuidJson =>
+          menuViewService.delete(menuUuidJson.as[UUID])
+        }
       case EventType.MENU_SCHEMA_EVOLVED =>
-        viewDatabase.viewVersionNonExistAction(event)(
-          targetVersion => menuViewService.evolve(targetVersion)
-        )
+        viewDatabase.viewVersionNonExistAction(event) { targetVersion =>
+          menuViewService.evolve(targetVersion)
+        }
       case _ =>
         logger.error(s"No such event type [${event.`type`}]")
     }
@@ -76,7 +75,8 @@ class EventService @Inject()(
   val userEventBus = eventStream(5) { event =>
     event.`type` match {
       case EventType.USER_PROFILE_CREATED_OR_UPDATED |
-          EventType.USER_PROFILE_DELETED | EventType.USER_SCHEMA_EVOLVED =>
+           EventType.USER_PROFILE_DELETED |
+           EventType.USER_SCHEMA_EVOLVED =>
         eventDao.insert(event)
       case _ =>
         logger.error(s"No such event type [${event.`type`}]")
@@ -85,19 +85,17 @@ class EventService @Inject()(
   } { event =>
     event.`type` match {
       case EventType.USER_PROFILE_CREATED_OR_UPDATED =>
-        event.data
-          .fold(logger.warn(s"[$event] is None")) { menuViewJson =>
-            userViewService.upsert(menuViewJson.as[UserView])
-          }
+        event.data.fold(logger.warn(s"[$event] is None")) { menuViewJson =>
+          userViewService.upsert(menuViewJson.as[UserView])
+        }
       case EventType.USER_PROFILE_DELETED =>
-        event.data
-          .fold(logger.warn(s"[$event] is None")) { menuUuidJson =>
-            menuViewService.delete(menuUuidJson.as[UUID])
-          }
+        event.data.fold(logger.warn(s"[$event] is None")) { menuUuidJson =>
+          menuViewService.delete(menuUuidJson.as[UUID])
+        }
       case EventType.USER_SCHEMA_EVOLVED =>
-        viewDatabase.viewVersionNonExistAction(event)(
-          targetVersion => userViewService.evolve(targetVersion)
-        )
+        viewDatabase.viewVersionNonExistAction(event) { targetVersion =>
+          userViewService.evolve(targetVersion)
+        }
       case _ =>
         logger.error(s"No such event type [${event.`type`}]")
     }
@@ -137,30 +135,26 @@ class EventDao extends Dao with LazyLogging {
 
   private val eventTable = TableQuery[EventTable]
 
-  def insert(event: Event): IO[Int] = {
-    IO.fromFuture(IO(db.run(eventTable += event)))
+  def insert(event: Event): IO[Int] = IO.fromFuture {
+    IO(db.run(eventTable += event))
   }
 
-  def findByTimeStamp(startTime: DateTime): IO[Seq[Event]] = {
-    IO.fromFuture {
-      IO {
-        db.run {
-          eventTable
-            .filter(event => event.timestamp >= startTime)
-            .result
-        }
+  def findByTimeStamp(startTime: DateTime): IO[Seq[Event]] = IO.fromFuture {
+    IO {
+      db.run {
+        eventTable
+          .filter(event => event.timestamp >= startTime)
+          .result
       }
     }
   }
 
-  def findByType(`type`: EventType): IO[Seq[Event]] = {
-    IO.fromFuture {
-      IO {
-        db.run {
-          eventTable
-            .filter(event => event.`type` === `type`)
-            .result
-        }
+  def findByType(`type`: EventType): IO[Seq[Event]] = IO.fromFuture {
+    IO {
+      db.run {
+        eventTable
+          .filter(event => event.`type` === `type`)
+          .result
       }
     }
   }

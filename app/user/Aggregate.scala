@@ -3,7 +3,7 @@ package user
 import java.util.UUID
 
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, QueueOfferResult}
 import auth.Auth
 import cats.data.OptionT
 import cats.effect.IO
@@ -12,8 +12,6 @@ import event.{Event, EventService, EventType}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json}
 import utils.ErrorResponseMessage
-
-import scala.concurrent.Future
 
 @Singleton
 class Aggregate @Inject()(
@@ -33,20 +31,19 @@ class Aggregate @Inject()(
   def createOrUpdateUser(user: JsValue): IO[Either[String, Option[UUID]]] = {
     auth.checkPassword(user, password) { isAuth =>
       if (!isAuth) {
-        IO(Left(ErrorResponseMessage.UNAUTHORIZED))
+        IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
       } else {
         val targetUserViewOpt = user.asOpt[UserView]
         val result = for {
           targetUserView <- OptionT.fromOption[IO](targetUserViewOpt)
           userViews <- OptionT.liftF(userViewService.findByEmail(targetUserView.email))
         } yield {
-          val updatedUserView = userViews.headOption
-            .fold(targetUserView) { userView =>
-              userView.copy(
-                name = targetUserView.name,
-                email = targetUserView.email
-              )
-            }
+          val updatedUserView = userViews.headOption.fold(targetUserView) { userView =>
+            userView.copy(
+              name = targetUserView.name,
+              email = targetUserView.email
+            )
+          }
 
           val event = Event(
             `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
@@ -56,34 +53,32 @@ class Aggregate @Inject()(
 
           Right(updatedUserView.uuid)
         }
-        result.value
-          .map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
+        result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
       }
     }
   }
 
   def deleteUser(user: JsValue): IO[Either[String, Option[UUID]]] = {
     auth.checkPassword(user, password) { isAuth =>
-      IO {
-        if (!isAuth) {
-          Left(ErrorResponseMessage.UNAUTHORIZED)
-        } else {
-          val userUuidStrOpt = (user \ "uuid").asOpt[String]
+      if (!isAuth) {
+        IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
+      } else {
+        val userUuidStrOpt = (user \ "uuid").asOpt[String]
+        IO {
           Either.cond(
             userUuidStrOpt.isDefined,
-            userUuidStrOpt
-              .map { userUuidStr =>
-                val userUuid = UUID.fromString(userUuidStr)
-                userViewService.delete(userUuid)
+            userUuidStrOpt.map { userUuidStr =>
+              val userUuid = UUID.fromString(userUuidStr)
+              userViewService.delete(userUuid)
 
-                val event = Event(
-                  `type` = EventType.USER_PROFILE_DELETED,
-                  data = Some(Json.toJson(userUuid)),
-                )
-                eventService.menuEventBus offer event
+              val event = Event(
+                `type` = EventType.USER_PROFILE_DELETED,
+                data = Some(Json.toJson(userUuid)),
+              )
+              eventService.menuEventBus offer event
 
-                userUuid
-              },
+              userUuid
+            },
             ErrorResponseMessage.NO_SUCH_IDENTITY
           )
         }
@@ -91,16 +86,13 @@ class Aggregate @Inject()(
     }
   }
 
-  def createOrUpdateUserViewSchema(version: JsValue): IO[Either[String, Unit]] = {
+  def createOrUpdateUserViewSchema(version: JsValue): IO[Either[String, QueueOfferResult]] = {
     auth.checkPassword(version, password) { isAuth =>
-      IO {
-        if (!isAuth) {
-          Left(ErrorResponseMessage.UNAUTHORIZED)
-        } else {
-          val event = Event(`type` = EventType.USER_SCHEMA_EVOLVED, data = Some(version))
-          eventService.userEventBus offer event
-          Right()
-        }
+      if (!isAuth) {
+        IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
+      } else {
+        val event = Event(`type` = EventType.USER_SCHEMA_EVOLVED, data = Some(version))
+        IO.fromFuture(IO((eventService.userEventBus offer event).map(Right(_))))
       }
     }
   }

@@ -53,7 +53,7 @@ class MenuViewService @Inject()(menuViewDao: MenuViewDao) {
     menuViewDao.delete(uuid)
   }
 
-  def evolve(targetVersion: String): Unit = {
+  def evolve(targetVersion: String): IO[Any] = {
     menuViewDao.evolve(targetVersion)
   }
 }
@@ -78,78 +78,70 @@ class MenuViewDao extends Dao with LazyLogging {
 
   private val menuViewTable = TableQuery[MenuViewTable]
 
-  def upsert(menuView: MenuView): IO[Int] = {
-    IO.fromFuture(IO(db.run(menuViewTable.insertOrUpdate(menuView))))
+  def upsert(menuView: MenuView): IO[Int] = IO.fromFuture {
+    IO(db.run(menuViewTable.insertOrUpdate(menuView)))
   }
 
-  def findByName(name: String): IO[Seq[MenuView]] = {
-    IO.fromFuture {
-      IO {
-        db.run {
-          menuViewTable
-            .filter(menuView => menuView.name === name)
-            .result
-        }
+  def findByName(name: String): IO[Seq[MenuView]] = IO.fromFuture {
+    IO {
+      db.run {
+        menuViewTable
+          .filter(menuView => menuView.name === name)
+          .result
       }
     }
   }
 
-  def findByNameLike(name: String): IO[Seq[MenuView]] = {
-    IO.fromFuture {
-      IO {
-        db.run {
-          menuViewTable
-            .filter(menuView => menuView.name like "%" + name + "%")
-            .result
-        }
+  def findByNameLike(name: String): IO[Seq[MenuView]] = IO.fromFuture {
+    IO {
+      db.run {
+        menuViewTable
+          .filter(menuView => menuView.name like "%" + name + "%")
+          .result
       }
     }
   }
 
-  def findAll(): IO[Seq[MenuView]] = {
-    IO.fromFuture(IO(db.run(menuViewTable.result)))
+  def findAll(): IO[Seq[MenuView]] = IO.fromFuture {
+    IO(db.run(menuViewTable.result))
   }
 
-  def delete(uuid: UUID): IO[Int] = {
-    IO.fromFuture {
-      IO {
-        db.run {
-          menuViewTable
-            .filter(menuView => menuView.uuid === uuid)
-            .delete
-        }
+  def delete(uuid: UUID): IO[Int] = IO.fromFuture {
+    IO {
+      db.run {
+        menuViewTable
+          .filter(menuView => menuView.uuid === uuid)
+          .delete
       }
     }
   }
 
-  def evolve(targetVersion: String): Unit = {
-    targetVersion match {
-      case "1.0" =>
-        db.run(sqlu"""
-          CREATE TABLE #${MenuView.tableName}(
-            #${MenuView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            #${MenuView.nameColumn} TEXT UNIQUE NOT NULL DEFAULT '',
-            #${MenuView.ingredientsColumn} TEXT[] NOT NULL DEFAULT '{}',
-            #${MenuView.recipeColumn} TEXT NOT NULL DEFAULT '',
-            #${MenuView.linkColumn} TEXT NOT NULL DEFAULT '',
-            #${MenuView.selectedCountColumn} INTEGER NOT NULL DEFAULT 0
+  def evolve(targetVersion: String): IO[Any] = IO.fromFuture {
+    IO {
+      targetVersion match {
+        case "1.0" =>
+          db.run(sqlu"""
+            CREATE TABLE #${MenuView.tableName}(
+              #${MenuView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              #${MenuView.nameColumn} TEXT UNIQUE NOT NULL DEFAULT '',
+              #${MenuView.ingredientsColumn} TEXT[] NOT NULL DEFAULT '{}',
+              #${MenuView.recipeColumn} TEXT NOT NULL DEFAULT '',
+              #${MenuView.linkColumn} TEXT NOT NULL DEFAULT '',
+              #${MenuView.selectedCountColumn} INTEGER NOT NULL DEFAULT 0
+            )
+          """)
+        case "2.0" =>
+          db.run(
+            DBIO.seq(
+              sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.uuidColumn} DROP DEFAULT""",
+              sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.ingredientsColumn} DROP DEFAULT""",
+              sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.recipeColumn} DROP DEFAULT""",
+              sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.linkColumn} DROP DEFAULT""",
+              sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.selectedCountColumn} DROP DEFAULT""",
+              sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.nameColumn} DROP DEFAULT"""
+            )
           )
-        """)
-        ()
-      case "2.0" =>
-        db.run(
-          DBIO.seq(
-            sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.uuidColumn} DROP DEFAULT""",
-            sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.ingredientsColumn} DROP DEFAULT""",
-            sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.recipeColumn} DROP DEFAULT""",
-            sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.linkColumn} DROP DEFAULT""",
-            sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.selectedCountColumn} DROP DEFAULT""",
-            sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.nameColumn} DROP DEFAULT"""
-          )
-        )
-        ()
-      case _ =>
-        logger.error(s"No such versioning defined with $targetVersion")
+      }
     }
   }
 }

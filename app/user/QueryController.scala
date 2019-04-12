@@ -12,12 +12,11 @@ class QueryController @Inject()(userViewService: UserViewService)(implicit
   executionContext: ExecutionContext
 ) extends AbstractController(controllerComponents) {
 
-  def getAllUsers(): Action[AnyContent] =
+  def getAllUsers(): Action[AnyContent] = {
     Action.async { implicit request =>
-      userViewService.findAll()
-        .map { userViews =>
-          Ok(Json.obj("result" -> Json.toJson(userViews)))
-        }
-        .unsafeToFuture()
+      userViewService.findAll().map { userViews =>
+        Ok(Json.obj("result" -> Json.toJson(userViews)))
+      }.unsafeToFuture()
     }
+  }
 }

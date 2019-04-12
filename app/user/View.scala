@@ -43,7 +43,7 @@ class UserViewService @Inject()(userViewDao: UserViewDao) {
     userViewDao.delete(uuid)
   }
 
-  def evolve(targetVersion: String): Unit = {
+  def evolve(targetVersion: String): IO[Any] = {
     userViewDao.evolve(targetVersion)
   }
 }
@@ -65,60 +65,54 @@ class UserViewDao extends Dao with LazyLogging {
 
   private val userViewTable = TableQuery[UserViewTable]
 
-  def upsert(userView: UserView): IO[Int] = {
-    IO.fromFuture(IO(db.run(userViewTable.insertOrUpdate(userView))))
+  def upsert(userView: UserView): IO[Int] = IO.fromFuture {
+    IO(db.run(userViewTable.insertOrUpdate(userView)))
   }
 
-  def findByEmail(email: String): IO[Seq[UserView]] = {
-    IO.fromFuture {
-      IO {
-        db.run {
-          userViewTable
-            .filter(userView => userView.email === email)
-            .result
-        }
+  def findByEmail(email: String): IO[Seq[UserView]] = IO.fromFuture {
+    IO {
+      db.run {
+        userViewTable
+          .filter(userView => userView.email === email)
+          .result
       }
     }
   }
 
-  def findAll(): IO[Seq[UserView]] = {
-    IO.fromFuture(IO(db.run(userViewTable.result)))
+  def findAll(): IO[Seq[UserView]] = IO.fromFuture {
+    IO(db.run(userViewTable.result))
   }
 
-  def delete(uuid: UUID): IO[Int] = {
-    IO.fromFuture {
-      IO {
-        db.run {
-          userViewTable
-            .filter(menuView => menuView.uuid === uuid)
-            .delete
-        }
+  def delete(uuid: UUID): IO[Int] = IO.fromFuture {
+    IO {
+      db.run {
+        userViewTable
+          .filter(menuView => menuView.uuid === uuid)
+          .delete
       }
     }
   }
 
-  def evolve(targetVersion: String): Unit = {
-    targetVersion match {
-      case "1.0" =>
-        db.run(sqlu"""
-          CREATE TABLE #${UserView.tableName}(
-            #${UserView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            #${UserView.nameColumn} TEXT DEFAULT '' NOT NULL,
-            #${UserView.emailColumn} TEXT UNIQUE DEFAULT '' NOT NULL
+  def evolve(targetVersion: String): IO[Any] = IO.fromFuture {
+    IO {
+      targetVersion match {
+        case "1.0" =>
+          db.run(sqlu"""
+            CREATE TABLE #${UserView.tableName}(
+              #${UserView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              #${UserView.nameColumn} TEXT DEFAULT '' NOT NULL,
+              #${UserView.emailColumn} TEXT UNIQUE DEFAULT '' NOT NULL
+            )
+          """)
+        case "2.0" =>
+          db.run(
+            DBIO.seq(
+              sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.uuidColumn} DROP DEFAULT""",
+              sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.nameColumn} DROP DEFAULT""",
+              sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.emailColumn} DROP DEFAULT"""
+            )
           )
-        """)
-        ()
-      case "2.0" =>
-        db.run(
-          DBIO.seq(
-            sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.uuidColumn} DROP DEFAULT""",
-            sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.nameColumn} DROP DEFAULT""",
-            sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.emailColumn} DROP DEFAULT"""
-          )
-        )
-        ()
-      case _ =>
-        logger.error(s"No such versioning defined with $targetVersion")
+      }
     }
   }
 }
