@@ -28,27 +28,30 @@ class CommandControllerTest extends FlatSpec
     with Matchers
     with Results {
 
+  private val envMap = sys.props.toMap
+
   override val container = FixedHostPortGenericContainer(
     "postgres:9.6",
     waitStrategy = Wait.forLogMessage(".*database system is ready to accept connections.*\\s", 2),
-    exposedHostPort = 54320,
+    exposedHostPort = envMap("POSTGRES_PORT").toInt,
     exposedContainerPort = 5432,
-    //TODO: get values from env variable
     env = Map(
-      "POSTGRES_PASSWORD" -> "1234",
-      "POSTGRES_DB" -> "random_menu_selector"
+      "POSTGRES_PASSWORD" -> envMap("POSTGRES_PASSWORD"),
+      "POSTGRES_DB" -> envMap("POSTGRES_DB")
     )
   )
 
-  // TODO: This needs to be removed once email check is done
+  // TODO: This needs to be removed once email testing automation is done
   private val emailSenderMock = mock[EmailSender]
+
   private val mockedApp = new GuiceApplicationBuilder()
+    // TODO: This needs to be removed once email testing automation is done
     .bindings(bind[EmailSender].toInstance(emailSenderMock))
     .build
 
-  val eventDao = mockedApp.injector.instanceOf(classOf[EventDao])
-  val menuViewDao = mockedApp.injector.instanceOf(classOf[MenuViewDao])
-  val userViewDao = mockedApp.injector.instanceOf(classOf[UserViewDao])
+  private val eventDao = mockedApp.injector.instanceOf(classOf[EventDao])
+  private val menuViewDao = mockedApp.injector.instanceOf(classOf[MenuViewDao])
+  private val userViewDao = mockedApp.injector.instanceOf(classOf[UserViewDao])
 
   private implicit val dispatcher = mockedApp.actorSystem.dispatcher
 
