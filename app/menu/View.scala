@@ -6,7 +6,7 @@ import cats.effect.IO
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
-import utils.db.Dao
+import utils.db.Db
 
 case class MenuView(uuid: Option[UUID] = Some(UUID.randomUUID()),
                     name: String,
@@ -53,13 +53,13 @@ class MenuViewService @Inject()(menuViewDao: MenuViewDao) {
     menuViewDao.delete(uuid)
   }
 
-  def evolve(targetVersion: String): IO[Any] = {
+  def evolve(targetVersion: String): IO[Unit] = {
     menuViewDao.evolve(targetVersion)
   }
 }
 
 @Singleton
-class MenuViewDao extends Dao with LazyLogging {
+class MenuViewDao extends Db with LazyLogging {
 
   import utils.db.PostgresProfile.api._
 
@@ -77,6 +77,17 @@ class MenuViewDao extends Dao with LazyLogging {
   }
 
   private val menuViewTable = TableQuery[MenuViewTable]
+
+  override def setup(): IO[Unit] = {
+    for {
+      dbSetup <- super.setup()
+      tableSetup <- IO.fromFuture(IO(db.run(sqlu"""CREATE TABLE IF NOT EXISTS #${MenuView.tableName}()""")))
+    } yield tableSetup
+  }
+
+  override def teardown(): IO[Unit] = {
+    IO.fromFuture(IO(db.run(menuViewTable.schema.drop)))
+  }
 
   def upsert(menuView: MenuView): IO[Int] = IO.fromFuture {
     IO(db.run(menuViewTable.insertOrUpdate(menuView)))
@@ -116,29 +127,29 @@ class MenuViewDao extends Dao with LazyLogging {
     }
   }
 
-  def evolve(targetVersion: String): IO[Any] = IO.fromFuture {
+  def evolve(targetVersion: String): IO[Unit] = IO.fromFuture {
     IO {
       targetVersion match {
         case "1.0" =>
-          db.run(sqlu"""
-            CREATE TABLE #${MenuView.tableName}(
-              #${MenuView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-              #${MenuView.nameColumn} TEXT UNIQUE NOT NULL DEFAULT '',
-              #${MenuView.ingredientsColumn} TEXT[] NOT NULL DEFAULT '{}',
-              #${MenuView.recipeColumn} TEXT NOT NULL DEFAULT '',
-              #${MenuView.linkColumn} TEXT NOT NULL DEFAULT '',
-              #${MenuView.selectedCountColumn} INTEGER NOT NULL DEFAULT 0
+          db.run(
+            DBIO.seq(
+              sqlu"""ALTER TABLE #${MenuView.tableName} ADD COLUMN #${MenuView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid()""",
+              sqlu"""ALTER TABLE #${MenuView.tableName} ADD COLUMN #${MenuView.nameColumn} TEXT UNIQUE NOT NULL DEFAULT ''""",
+              sqlu"""ALTER TABLE #${MenuView.tableName} ADD COLUMN #${MenuView.ingredientsColumn} TEXT[] NOT NULL DEFAULT '{}'""",
+              sqlu"""ALTER TABLE #${MenuView.tableName} ADD COLUMN #${MenuView.recipeColumn} TEXT NOT NULL DEFAULT ''""",
+              sqlu"""ALTER TABLE #${MenuView.tableName} ADD COLUMN #${MenuView.linkColumn} TEXT NOT NULL DEFAULT ''""",
+              sqlu"""ALTER TABLE #${MenuView.tableName} ADD COLUMN #${MenuView.selectedCountColumn} INTEGER NOT NULL DEFAULT 0""",
             )
-          """)
+          )
         case "2.0" =>
           db.run(
             DBIO.seq(
               sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.uuidColumn} DROP DEFAULT""",
+              sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.nameColumn} DROP DEFAULT""",
               sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.ingredientsColumn} DROP DEFAULT""",
               sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.recipeColumn} DROP DEFAULT""",
               sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.linkColumn} DROP DEFAULT""",
               sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.selectedCountColumn} DROP DEFAULT""",
-              sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.nameColumn} DROP DEFAULT"""
             )
           )
       }

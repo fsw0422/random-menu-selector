@@ -42,8 +42,11 @@ lazy val RandomMenuSelector = (project in file("."))
 fork in run := true
 
 javaOptions in Test ++= Seq(
-  "-DWRITE_PASSWORD=1234",
   "-DPOSTGRESQL_PASSWORD=1234",
   "-DPOSTGRESQL_HOST=localhost",
+  "-DPOSTGRESQL_PORT=54320",
+  "-DPOSTGRESQL_DB=random_menu_selector",
+  "-DPOSTGRESQL_SSL_MODE=disable",
+  "-DWRITE_PASSWORD=1234",
   "-DEMAIL_PASSWORD=1234"
 )

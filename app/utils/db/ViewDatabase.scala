@@ -20,7 +20,7 @@ class ViewDatabase @Inject()(eventDao: EventDao) extends LazyLogging {
     * @param action The action that needs to be fed
     */
   def viewVersionNonExistAction(event: Event)
-    (action: String => IO[Any])
+    (action: String => IO[Unit])
     (implicit executionContext: ExecutionContext): IO[Unit] = IO {
     event.data.fold(logger.warn(s"[$event] is None")) { eventData =>
       val targetVersion = (eventData \ "version").as[String]

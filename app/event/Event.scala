@@ -13,7 +13,7 @@ import menu.{MenuView, MenuViewService}
 import org.joda.time.DateTime
 import play.api.libs.json.JsValue
 import user.{UserView, UserViewService}
-import utils.db.{Dao, ViewDatabase}
+import utils.db.{Db, ViewDatabase}
 
 object EventType extends Enumeration {
   type EventType = Value
@@ -113,7 +113,7 @@ class EventService @Inject()(
 }
 
 @Singleton
-class EventDao extends Dao with LazyLogging {
+class EventDao extends Db with LazyLogging {
 
   import utils.db.PostgresProfile.api._
 
@@ -134,6 +134,17 @@ class EventDao extends Dao with LazyLogging {
   }
 
   private val eventTable = TableQuery[EventTable]
+
+  override def setup(): IO[Unit] = {
+    for {
+      dbSetup <- super.setup()
+      tableSetup <- IO.fromFuture(IO(db.run(eventTable.schema.create)))
+    } yield tableSetup
+  }
+
+  override def teardown(): IO[Unit] = {
+    IO.fromFuture(IO(db.run(eventTable.schema.drop)))
+  }
 
   def insert(event: Event): IO[Int] = IO.fromFuture {
     IO(db.run(eventTable += event))
@@ -158,8 +169,4 @@ class EventDao extends Dao with LazyLogging {
       }
     }
   }
-
-  // Initial creation of Event table
-  // Define event database evolution here
-  db.run(eventTable.schema.create)
 }
