@@ -135,15 +135,12 @@ class EventDao extends Db with LazyLogging {
 
   private val eventTable = TableQuery[EventTable]
 
-  override def setup(): IO[Unit] = {
-    for {
-      dbSetup <- super.setup()
-      tableSetup <- IO.fromFuture(IO(db.run(eventTable.schema.create)))
-    } yield tableSetup
+  override def setup(): IO[Unit] = IO.fromFuture {
+    IO(db.run(eventTable.schema.create))
   }
 
-  override def teardown(): IO[Unit] = {
-    IO.fromFuture(IO(db.run(eventTable.schema.drop)))
+  override def teardown(): IO[Unit] = IO.fromFuture {
+    IO(db.run(eventTable.schema.drop))
   }
 
   def insert(event: Event): IO[Int] = IO.fromFuture {

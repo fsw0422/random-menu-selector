@@ -61,10 +61,12 @@ class CommandControllerTest extends FlatSpec
     menuViewDao.setup().unsafeRunSync()
     menuViewDao.evolve("1.0").unsafeRunSync()
     menuViewDao.evolve("2.0").unsafeRunSync()
+    menuViewDao.evolve("3.0").unsafeRunSync()
 
     userViewDao.setup().unsafeRunSync()
     userViewDao.evolve("1.0").unsafeRunSync()
     userViewDao.evolve("2.0").unsafeRunSync()
+    userViewDao.evolve("3.0").unsafeRunSync()
   }
 
   after {
