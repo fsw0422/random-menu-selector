@@ -157,7 +157,8 @@ class MenuViewDao extends Db with LazyLogging {
             )
           )
         case "3.0" =>
-          db.run(sqlu"""DROP EXTENSION IF EXISTS "pgcrypto"""").map(_ => ())
+          db.run(sqlu"""DROP EXTENSION IF EXISTS "pgcrypto"""")
+            .map(_ => ())
       }
     }
   }
