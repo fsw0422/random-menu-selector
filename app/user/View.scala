@@ -6,7 +6,7 @@ import cats.effect.IO
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import utils.db.Dao
+import utils.db.Db
 
 case class UserView(uuid: Option[UUID] = Some(UUID.randomUUID()),
                     name: String,
@@ -43,13 +43,13 @@ class UserViewService @Inject()(userViewDao: UserViewDao) {
     userViewDao.delete(uuid)
   }
 
-  def evolve(targetVersion: String): IO[Any] = {
+  def evolve(targetVersion: String): IO[Unit] = {
     userViewDao.evolve(targetVersion)
   }
 }
 
 @Singleton
-class UserViewDao extends Dao with LazyLogging {
+class UserViewDao extends Db with LazyLogging {
 
   import utils.db.PostgresProfile.api._
 
@@ -64,6 +64,17 @@ class UserViewDao extends Dao with LazyLogging {
   }
 
   private val userViewTable = TableQuery[UserViewTable]
+
+  override def setup(): IO[Unit] =  {
+    for {
+      dbSetup <- super.setup()
+      tableSetup <- IO.fromFuture(IO(db.run(sqlu"""CREATE TABLE IF NOT EXISTS #${UserView.tableName}()""")))
+    } yield tableSetup
+  }
+
+  override def teardown(): IO[Unit] = IO.fromFuture {
+    IO(db.run(userViewTable.schema.drop))
+  }
 
   def upsert(userView: UserView): IO[Int] = IO.fromFuture {
     IO(db.run(userViewTable.insertOrUpdate(userView)))
@@ -93,17 +104,17 @@ class UserViewDao extends Dao with LazyLogging {
     }
   }
 
-  def evolve(targetVersion: String): IO[Any] = IO.fromFuture {
+  def evolve(targetVersion: String): IO[Unit] = IO.fromFuture {
     IO {
       targetVersion match {
         case "1.0" =>
-          db.run(sqlu"""
-            CREATE TABLE #${UserView.tableName}(
-              #${UserView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-              #${UserView.nameColumn} TEXT DEFAULT '' NOT NULL,
-              #${UserView.emailColumn} TEXT UNIQUE DEFAULT '' NOT NULL
+          db.run(
+            DBIO.seq(
+              sqlu"""ALTER TABLE #${UserView.tableName} ADD COLUMN #${UserView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid()""",
+              sqlu"""ALTER TABLE #${UserView.tableName} ADD COLUMN #${UserView.nameColumn} TEXT DEFAULT '' NOT NULL""",
+              sqlu"""ALTER TABLE #${UserView.tableName} ADD COLUMN #${UserView.emailColumn} TEXT UNIQUE DEFAULT '' NOT NULL"""
             )
-          """)
+          )
         case "2.0" =>
           db.run(
             DBIO.seq(

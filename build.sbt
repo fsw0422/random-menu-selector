@@ -30,19 +30,25 @@ libraryDependencies ++= Seq(
   "com.github.tminglei" %% "slick-pg_play-json" % slickPgVersion,
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
   "org.scalatest" %% "scalatest" % "3.0.5" % Test,
-  "org.mockito" %% "mockito-scala" % "1.0.0-beta.7" % Test
+  "org.mockito" %% "mockito-scala" % "1.0.0-beta.7" % Test,
+  "com.dimafeng" %% "testcontainers-scala" % "0.24.0" % Test
 )
+
+fork in run := true
 
 lazy val RandomMenuSelector = (project in file("."))
   .enablePlugins(PlayScala)
   .enablePlugins(DockerPlugin)
   .enablePlugins(ClasspathJarPlugin)
 
-fork in run := true
+fork in Test := true
 
 javaOptions in Test ++= Seq(
+  "-DPOSTGRES_PASSWORD=1234",
+  "-DPOSTGRES_HOST=localhost",
+  "-DPOSTGRES_PORT=54320",
+  "-DPOSTGRES_DB=random_menu_selector",
+  "-DPOSTGRES_SSL_MODE=disable",
   "-DWRITE_PASSWORD=1234",
-  "-DPOSTGRESQL_PASSWORD=1234",
-  "-DPOSTGRESQL_HOST=localhost",
   "-DEMAIL_PASSWORD=1234"
 )
