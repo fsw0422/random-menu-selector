@@ -7,7 +7,7 @@ import javax.inject.Singleton
 import javax.mail.internet.{InternetAddress, MimeMessage}
 import javax.mail.{Address, Message, Session}
 
-case class Email(emails: Array[String], subject: String, message: String)
+final case class Email(emails: Array[String], subject: String, message: String)
 
 @Singleton
 class EmailSender {

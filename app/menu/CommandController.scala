@@ -7,13 +7,10 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{AbstractController, Action, ControllerComponents}
 
-import scala.concurrent.ExecutionContext
-
 @Singleton
-class CommandController @Inject()(aggregate: Aggregate)(implicit
-  controllerComponents: ControllerComponents,
-  executionContext: ExecutionContext
-) extends AbstractController(controllerComponents) {
+class CommandController @Inject()(aggregate: Aggregate)
+  (implicit controllerComponents: ControllerComponents)
+  extends AbstractController(controllerComponents) {
 
   def createOrUpdateMenu(): Action[JsValue] = {
     Action.async(parse.json) { implicit request =>

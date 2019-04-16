@@ -23,7 +23,7 @@ object EventType extends Enumeration {
     Value
 }
 
-case class Event(uuid: Option[UUID] = Some(UUID.randomUUID()),
+final case class Event(uuid: Option[UUID] = Some(UUID.randomUUID()),
                  timestamp: DateTime = DateTime.now(),
                  `type`: EventType = EventType.UNKNOWN,
                  data: Option[JsValue] = None)

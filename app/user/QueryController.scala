@@ -7,10 +7,9 @@ import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponent
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class QueryController @Inject()(userViewService: UserViewService)(implicit
-  controllerComponents: ControllerComponents,
-  executionContext: ExecutionContext
-) extends AbstractController(controllerComponents) {
+class QueryController @Inject()(userViewService: UserViewService)
+  (implicit controllerComponents: ControllerComponents)
+  extends AbstractController(controllerComponents) {
 
   def getAllUsers(): Action[AnyContent] = {
     Action.async { implicit request =>

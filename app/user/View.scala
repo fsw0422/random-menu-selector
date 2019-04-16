@@ -8,7 +8,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import utils.db.Db
 
-case class UserView(uuid: Option[UUID] = Some(UUID.randomUUID()),
+final case class UserView(uuid: Option[UUID] = Some(UUID.randomUUID()),
                     name: String,
                     email: String)
 
