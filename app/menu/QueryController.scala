@@ -4,13 +4,10 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 
-import scala.concurrent.ExecutionContext
-
 @Singleton
-class QueryController @Inject()(menuViewService: MenuViewService)(implicit
-  controllerComponents: ControllerComponents,
-  executionContext: ExecutionContext
-) extends AbstractController(controllerComponents) {
+class QueryController @Inject()(menuViewService: MenuViewService)
+  (implicit controllerComponents: ControllerComponents)
+  extends AbstractController(controllerComponents) {
 
   def getMenusByNameLike(name: String): Action[AnyContent] = {
     Action.async { implicit request =>

@@ -8,7 +8,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
 import utils.db.Db
 
-case class MenuView(uuid: Option[UUID] = Some(UUID.randomUUID()),
+final case class MenuView(uuid: Option[UUID] = Some(UUID.randomUUID()),
                     name: String,
                     ingredients: Seq[String],
                     recipe: String,
@@ -33,7 +33,7 @@ object MenuView {
 @Singleton
 class MenuViewService @Inject()(menuViewDao: MenuViewDao) {
 
-  def upsert(menuView: MenuView): IO[Int] = {
+  def upsert(menuView: MenuView): IO[Unit] = {
     menuViewDao.upsert(menuView)
   }
 
@@ -49,7 +49,7 @@ class MenuViewService @Inject()(menuViewDao: MenuViewDao) {
     menuViewDao.findAll()
   }
 
-  def delete(uuid: UUID): IO[Int] = {
+  def delete(uuid: UUID): IO[Unit] = {
     menuViewDao.delete(uuid)
   }
 
@@ -78,19 +78,22 @@ class MenuViewDao extends Db with LazyLogging {
 
   private val menuViewTable = TableQuery[MenuViewTable]
 
-  override def setup(): IO[Unit] = {
-    for {
-      dbSetup <- super.setup()
-      tableSetup <- IO.fromFuture(IO(db.run(sqlu"""CREATE TABLE IF NOT EXISTS #${MenuView.tableName}()""")))
-    } yield tableSetup
+  override def setup(): IO[Unit] = IO.fromFuture {
+    IO {
+      db.run(sqlu"""CREATE TABLE IF NOT EXISTS #${MenuView.tableName}()""")
+        .map(_ => ())
+    }
   }
 
-  override def teardown(): IO[Unit] = {
-    IO.fromFuture(IO(db.run(menuViewTable.schema.drop)))
+  override def teardown(): IO[Unit] = IO.fromFuture {
+    IO(db.run(menuViewTable.schema.drop))
   }
 
-  def upsert(menuView: MenuView): IO[Int] = IO.fromFuture {
-    IO(db.run(menuViewTable.insertOrUpdate(menuView)))
+  def upsert(menuView: MenuView): IO[Unit] = IO.fromFuture {
+    IO {
+      db.run(menuViewTable.insertOrUpdate(menuView))
+        .map(_ => ())
+    }
   }
 
   def findByName(name: String): IO[Seq[MenuView]] = IO.fromFuture {
@@ -117,13 +120,13 @@ class MenuViewDao extends Db with LazyLogging {
     IO(db.run(menuViewTable.result))
   }
 
-  def delete(uuid: UUID): IO[Int] = IO.fromFuture {
+  def delete(uuid: UUID): IO[Unit] = IO.fromFuture {
     IO {
       db.run {
         menuViewTable
           .filter(menuView => menuView.uuid === uuid)
           .delete
-      }
+      }.map(_ => ())
     }
   }
 
@@ -133,6 +136,7 @@ class MenuViewDao extends Db with LazyLogging {
         case "1.0" =>
           db.run(
             DBIO.seq(
+              sqlu"""CREATE EXTENSION IF NOT EXISTS "pgcrypto"""",
               sqlu"""ALTER TABLE #${MenuView.tableName} ADD COLUMN #${MenuView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid()""",
               sqlu"""ALTER TABLE #${MenuView.tableName} ADD COLUMN #${MenuView.nameColumn} TEXT UNIQUE NOT NULL DEFAULT ''""",
               sqlu"""ALTER TABLE #${MenuView.tableName} ADD COLUMN #${MenuView.ingredientsColumn} TEXT[] NOT NULL DEFAULT '{}'""",
@@ -152,6 +156,9 @@ class MenuViewDao extends Db with LazyLogging {
               sqlu"""ALTER TABLE #${MenuView.tableName} ALTER COLUMN #${MenuView.selectedCountColumn} DROP DEFAULT""",
             )
           )
+        case "3.0" =>
+          db.run(sqlu"""DROP EXTENSION IF EXISTS "pgcrypto"""")
+            .map(_ => ())
       }
     }
   }

@@ -3,23 +3,14 @@ package user
 import java.util.UUID
 
 import akka.stream.QueueOfferResult
-import auth.Auth
 import javax.inject.{Inject, Singleton}
-import play.api.Configuration
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{AbstractController, Action, ControllerComponents}
 
-import scala.concurrent.ExecutionContext
-
 @Singleton
-class CommandController @Inject()(
-  auth: Auth,
-  aggregate: Aggregate
-)(implicit
-  controllerComponents: ControllerComponents,
-  configuration: Configuration,
-  executionContext: ExecutionContext
-) extends AbstractController(controllerComponents) {
+class CommandController @Inject()(aggregate: Aggregate)
+  (implicit controllerComponents: ControllerComponents)
+  extends AbstractController(controllerComponents) {
 
   def createOrUpdateUser(): Action[JsValue] = {
     Action.async(parse.json) { implicit request =>

@@ -8,7 +8,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import utils.db.Db
 
-case class UserView(uuid: Option[UUID] = Some(UUID.randomUUID()),
+final case class UserView(uuid: Option[UUID] = Some(UUID.randomUUID()),
                     name: String,
                     email: String)
 
@@ -27,7 +27,7 @@ object UserView {
 @Singleton
 class UserViewService @Inject()(userViewDao: UserViewDao) {
 
-  def upsert(userView: UserView): IO[Int] = {
+  def upsert(userView: UserView): IO[Unit] = {
     userViewDao.upsert(userView)
   }
 
@@ -39,7 +39,7 @@ class UserViewService @Inject()(userViewDao: UserViewDao) {
     userViewDao.findAll()
   }
 
-  def delete(uuid: UUID): IO[Int] = {
+  def delete(uuid: UUID): IO[Unit] = {
     userViewDao.delete(uuid)
   }
 
@@ -65,19 +65,22 @@ class UserViewDao extends Db with LazyLogging {
 
   private val userViewTable = TableQuery[UserViewTable]
 
-  override def setup(): IO[Unit] =  {
-    for {
-      dbSetup <- super.setup()
-      tableSetup <- IO.fromFuture(IO(db.run(sqlu"""CREATE TABLE IF NOT EXISTS #${UserView.tableName}()""")))
-    } yield tableSetup
+  override def setup(): IO[Unit] = IO.fromFuture {
+    IO {
+      db.run(sqlu"""CREATE TABLE IF NOT EXISTS #${UserView.tableName}()""")
+        .map(_ => ())
+    }
   }
 
   override def teardown(): IO[Unit] = IO.fromFuture {
     IO(db.run(userViewTable.schema.drop))
   }
 
-  def upsert(userView: UserView): IO[Int] = IO.fromFuture {
-    IO(db.run(userViewTable.insertOrUpdate(userView)))
+  def upsert(userView: UserView): IO[Unit] = IO.fromFuture {
+    IO{
+      db.run(userViewTable.insertOrUpdate(userView))
+        .map(_ => ())
+    }
   }
 
   def findByEmail(email: String): IO[Seq[UserView]] = IO.fromFuture {
@@ -94,13 +97,13 @@ class UserViewDao extends Db with LazyLogging {
     IO(db.run(userViewTable.result))
   }
 
-  def delete(uuid: UUID): IO[Int] = IO.fromFuture {
+  def delete(uuid: UUID): IO[Unit] = IO.fromFuture {
     IO {
       db.run {
         userViewTable
           .filter(menuView => menuView.uuid === uuid)
           .delete
-      }
+      }.map(_ => ())
     }
   }
 
@@ -110,6 +113,7 @@ class UserViewDao extends Db with LazyLogging {
         case "1.0" =>
           db.run(
             DBIO.seq(
+              sqlu"""CREATE EXTENSION IF NOT EXISTS "pgcrypto"""",
               sqlu"""ALTER TABLE #${UserView.tableName} ADD COLUMN #${UserView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid()""",
               sqlu"""ALTER TABLE #${UserView.tableName} ADD COLUMN #${UserView.nameColumn} TEXT DEFAULT '' NOT NULL""",
               sqlu"""ALTER TABLE #${UserView.tableName} ADD COLUMN #${UserView.emailColumn} TEXT UNIQUE DEFAULT '' NOT NULL"""
@@ -123,6 +127,9 @@ class UserViewDao extends Db with LazyLogging {
               sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.emailColumn} DROP DEFAULT"""
             )
           )
+        case "3.0" =>
+          db.run(sqlu"""DROP EXTENSION IF EXISTS "pgcrypto"""")
+            .map(_ => ())
       }
     }
   }
