@@ -34,21 +34,10 @@ libraryDependencies ++= Seq(
   "com.dimafeng" %% "testcontainers-scala" % "0.24.0" % Test
 )
 
-fork in run := true
-
 lazy val RandomMenuSelector = (project in file("."))
   .enablePlugins(PlayScala)
   .enablePlugins(DockerPlugin)
   .enablePlugins(ClasspathJarPlugin)
 
-fork in Test := true
-
-javaOptions in Test ++= Seq(
-  "-DPOSTGRES_PASSWORD=1234",
-  "-DPOSTGRES_HOST=localhost",
-  "-DPOSTGRES_PORT=54320",
-  "-DPOSTGRES_DB=random_menu_selector",
-  "-DPOSTGRES_SSL_MODE=disable",
-  "-DWRITE_PASSWORD=1234",
-  "-DEMAIL_PASSWORD=1234"
-)
+fork in run := true
+fork in Test := false

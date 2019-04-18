@@ -1,3 +1,11 @@
 #!/bin/bash
 
-sbt ";clean ;scapegoat ;coverage ;test ;coverageReport"
+sbt -jvm-debug 5005 \
+-DPOSTGRES_PASSWORD=fake \
+-DPOSTGRES_HOST=localhost \
+-DPOSTGRES_PORT=54320 \
+-DPOSTGRES_DB=random_menu_selector \
+-DPOSTGRES_SSL_MODE=disable \
+-DWRITE_PASSWORD=fake \
+-DEMAIL_PASSWORD=fake \
+";clean ;scapegoat ;coverage ;test ;coverageReport"
