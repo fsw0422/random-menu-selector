@@ -16,7 +16,7 @@ import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import user.{UserView, UserViewDao}
-import utils.EmailSender
+import utils.{Email, EmailSender}
 
 @RunWith(classOf[JUnitRunner])
 class CommandControllerTest extends FlatSpec
@@ -41,11 +41,8 @@ class CommandControllerTest extends FlatSpec
     )
   )
 
-  // TODO: This needs to be removed once email testing automation is done
   private val emailSenderMock = mock[EmailSender]
-
   private val mockedApp = new GuiceApplicationBuilder()
-    // TODO: This needs to be removed once email testing automation is done
     .bindings(bind[EmailSender].toInstance(emailSenderMock))
     .build
 
@@ -121,6 +118,14 @@ class CommandControllerTest extends FlatSpec
     uuid should (equal("123e4567-e89b-12d3-a456-426655440000") or equal("223e4567-e89b-12d3-a456-426655440000"))
 
     And("send emails to all users")
-    // TODO: for email, send to test account and retrieve email with api for confirmation
+    verify(emailSenderMock, times(1)).send(
+      any[String],
+      any[String],
+      any[String],
+      any[String],
+      any[String],
+      any[String],
+      any[Email]
+    )
   }
 }
