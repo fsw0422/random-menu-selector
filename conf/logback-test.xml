@@ -3,7 +3,8 @@
   <include resource="logback-base.xml" />
 
   <root level="DEBUG">
-    <appender-ref ref="async_logstash_app"/>
+    <appender-ref ref="FILE_ASYNC"/>
+    <appender-ref ref="STDOUT_ASYNC"/>
   </root>
 
   <logger name="play" level="DEBUG" />
