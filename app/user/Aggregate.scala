@@ -49,6 +49,7 @@ class Aggregate @Inject()(
             `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
             data = Some(Json.toJson(updatedUserView))
           )
+          //TODO: This should be an IO operation
           eventService.userEventBus offer event
 
           Right(updatedUserView.uuid)
@@ -71,6 +72,7 @@ class Aggregate @Inject()(
               val userUuid = UUID.fromString(userUuidStr)
               userViewService.delete(userUuid)
 
+              //TODO: This should be an IO operation
               val event = Event(
                 `type` = EventType.USER_PROFILE_DELETED,
                 data = Some(Json.toJson(userUuid)),
