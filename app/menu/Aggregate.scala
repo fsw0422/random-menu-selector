@@ -5,7 +5,7 @@ import java.util.UUID
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, QueueOfferResult}
 import auth.Auth
-import cats.data.OptionT
+import cats.data.{OptionT, State}
 import cats.effect.IO
 import com.typesafe.config.Config
 import event.{Event, EventService, EventType}
@@ -38,18 +38,11 @@ class Aggregate @Inject()(
       if (!isAuth) {
         IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
       } else {
-        val targetMenuViewOpt = menu.asOpt[MenuView]
+        val newMenuViewOpt = menu.asOpt[MenuView]
         val result = for {
-          targetMenuView <- OptionT.fromOption[IO](targetMenuViewOpt)
-          menuViews <- OptionT.liftF(menuViewService.findByName(targetMenuView.name))
-          updatedMenuView = menuViews.headOption.fold(targetMenuView) { menuView =>
-            menuView.copy(
-              name = targetMenuView.name,
-              ingredients = targetMenuView.ingredients,
-              recipe = targetMenuView.recipe,
-              link = targetMenuView.link
-            )
-          }
+          newMenuView <- OptionT.fromOption[IO](newMenuViewOpt)
+          menuViews <- OptionT.liftF(menuViewService.findByName(newMenuView.name))
+          updatedMenuView = menuViews.headOption.fold(newMenuView)(oldMenuView => update(oldMenuView, newMenuView))
           _ <- OptionT.liftF {
             val event = Event(
               `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
@@ -93,7 +86,7 @@ class Aggregate @Inject()(
       randomMenuView <- OptionT.fromOption[IO](Random.shuffle(menuViews).headOption)
       selectedMenuViews <- OptionT.liftF(menuViewService.findByName(randomMenuView.name))
       selectedMenu <- OptionT.fromOption[IO](selectedMenuViews.headOption)
-      updatedSelectedMenuView = selectedMenu.copy(selectedCount = selectedMenu.selectedCount.map(_ + 1))
+      updatedSelectedMenuView = incrementSelectedCount(selectedMenu)
       _ <- OptionT.liftF(sendEmail(updatedSelectedMenuView, userViews))
       _ <- OptionT.liftF {
         val event = Event(
@@ -115,6 +108,29 @@ class Aggregate @Inject()(
         IO.fromFuture(IO((eventService.menuEventBus offer event).map(Right(_))))
       }
     }
+  }
+
+  private def update(initialMenuView: MenuView, menuView: MenuView): MenuView = {
+    val updatedState = State[MenuView, Unit] { oldMenuView =>
+      val newMenuView = oldMenuView.copy(
+        name = menuView.name,
+        ingredients = menuView.ingredients,
+        recipe = menuView.recipe,
+        link = menuView.link
+      )
+      (newMenuView, ())
+    }
+    val (updated, void) = updatedState.run(initialMenuView).value
+    updated
+  }
+
+  private def incrementSelectedCount(initialMenuView: MenuView): MenuView = {
+    val selectedCountIncrementedState = State[MenuView, Unit] { oldMenuView =>
+      val newMenuView = oldMenuView.copy(selectedCount = oldMenuView.selectedCount.map(_ + 1))
+      (newMenuView, ())
+    }
+    val (selectedCountIncremented, void) = selectedCountIncrementedState.run(initialMenuView).value
+    selectedCountIncremented
   }
 
   private def sendEmail(menu: MenuView, users: Seq[UserView]): IO[Unit] = {

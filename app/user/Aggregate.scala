@@ -33,16 +33,11 @@ class Aggregate @Inject()(
       if (!isAuth) {
         IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
       } else {
-        val targetUserViewOpt = user.asOpt[UserView]
+        val newUserViewOpt = user.asOpt[UserView]
         val result = for {
-          targetUserView <- OptionT.fromOption[IO](targetUserViewOpt)
-          userViews <- OptionT.liftF(userViewService.findByEmail(targetUserView.email))
-          updatedUserView = userViews.headOption.fold(targetUserView) { userView =>
-            userView.copy(
-              name = targetUserView.name,
-              email = targetUserView.email
-            )
-          }
+          newUserView <- OptionT.fromOption[IO](newUserViewOpt)
+          userViews <- OptionT.liftF(userViewService.findByEmail(newUserView.email))
+          updatedUserView = userViews.headOption.fold(newUserView)(oldUserView => update(oldUserView, newUserView))
           _ <- OptionT.liftF {
             val event = Event(
               `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
