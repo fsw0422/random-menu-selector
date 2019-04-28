@@ -56,7 +56,6 @@ class Aggregate @Inject()(
             `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
             data = Some(Json.toJson(updatedMenuView)),
           )
-          //TODO: This should be an IO operation
           eventService.menuEventBus offer event
 
           Right(updatedMenuView.uuid)
@@ -83,7 +82,6 @@ class Aggregate @Inject()(
                 `type` = EventType.MENU_PROFILE_DELETED,
                 data = Some(Json.toJson(menuUuid)),
               )
-              //TODO: This should be an IO operation
               eventService.menuEventBus offer event
 
               menuUuid
@@ -111,11 +109,10 @@ class Aggregate @Inject()(
         `type` = EventType.RANDOM_MENU_ASKED,
         data = Some(Json.toJson(updatedSelectedMenuView))
       )
-      //TODO: This should be an IO operation
       eventService.menuEventBus offer event
 
       if (userViews.nonEmpty && menuViews.nonEmpty) {
-        sendEmail(updatedSelectedMenuView, userViews).unsafeRunSync()
+        sendEmail(updatedSelectedMenuView, userViews)
         Right(updatedSelectedMenuView.uuid)
       } else {
         Right(None)
