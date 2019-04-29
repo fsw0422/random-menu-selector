@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <included>
+  <property name="LOG_PATH" value="logs"/>
+  <property name="LOG_APP" value="application.log"/>
+
   <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-    <file>logs/application.log</file>
+    <file>${LOG_PATH}/${LOG_APP}</file>
     <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
       <fileNamePattern>${LOG_PATH}/${LOG_APP}.%d{yyyy-MM-dd-HH}.%i.json.gz</fileNamePattern>
       <maxFileSize>64MB</maxFileSize>
@@ -27,4 +30,3 @@
     <appender-ref ref="STDOUT"/>
   </appender>
 </included>
-
