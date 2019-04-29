@@ -5,7 +5,7 @@ import java.util.UUID
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, QueueOfferResult}
 import auth.Auth
-import cats.data.OptionT
+import cats.data.{OptionT, State}
 import cats.effect.IO
 import com.typesafe.config.Config
 import event.{Event, EventService, EventType}
@@ -83,5 +83,17 @@ class Aggregate @Inject()(
         IO.fromFuture(IO((eventService.userEventBus offer event).map(Right(_))))
       }
     }
+  }
+
+  private def update(initialUserView: UserView, userView: UserView): UserView = {
+    val updatedState = State[UserView, Unit] { oldUserView =>
+      val newUserView = oldUserView.copy(
+        email = userView.email,
+        name = userView.name
+      )
+      (newUserView, ())
+    }
+    val (updated, void) = updatedState.run(initialUserView).value
+    updated
   }
 }
