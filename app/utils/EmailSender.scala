@@ -9,16 +9,31 @@ import javax.mail.{Address, Message, Session}
 
 final case class Email(emails: Array[String], subject: String, message: String)
 
-@Singleton
-class EmailSender {
+trait EmailSender {
 
-  def send(smtpHost: String,
-           smtpPort: String,
-           smtpUsername: String,
-           smtpPassword: String,
-           from: String,
-           encoding: String,
-           emailDescription: Email): IO[Unit] = IO {
+  def send(
+    smtpHost: String,
+    smtpPort: String,
+    smtpUsername: String,
+    smtpPassword: String,
+    from: String,
+    encoding: String,
+    emailDescription: Email
+  ): IO[Unit]
+}
+
+@Singleton
+class EmailSenderImpl extends EmailSender {
+
+  override def send(
+    smtpHost: String,
+    smtpPort: String,
+    smtpUsername: String,
+    smtpPassword: String,
+    from: String,
+    encoding: String,
+    emailDescription: Email
+  ): IO[Unit] = IO {
     val props = new Properties()
     props.put("mail.smtps.host", smtpHost)
     props.put("mail.smtps.port", smtpPort)

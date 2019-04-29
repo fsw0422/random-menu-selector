@@ -112,7 +112,7 @@ class Aggregate @Inject()(
       eventService.menuEventBus offer event
 
       if (userViews.nonEmpty && menuViews.nonEmpty) {
-        sendEmail(updatedSelectedMenuView, userViews)
+        sendEmail(updatedSelectedMenuView, userViews).unsafeRunSync()
         Right(updatedSelectedMenuView.uuid)
       } else {
         Right(None)
