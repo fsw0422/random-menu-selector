@@ -19,14 +19,15 @@ object EventType extends Enumeration {
   type EventType = Value
   val UNKNOWN, RANDOM_MENU_ASKED, MENU_PROFILE_CREATED_OR_UPDATED,
   MENU_PROFILE_DELETED, MENU_SCHEMA_EVOLVED, USER_PROFILE_CREATED_OR_UPDATED,
-  USER_PROFILE_DELETED, USER_SCHEMA_EVOLVED =
-    Value
+  USER_PROFILE_DELETED, USER_SCHEMA_EVOLVED = Value
 }
 
-final case class Event(uuid: Option[UUID] = Some(UUID.randomUUID()),
-                 timestamp: DateTime = DateTime.now(),
-                 `type`: EventType = EventType.UNKNOWN,
-                 data: Option[JsValue] = None)
+final case class Event(
+  uuid: Option[UUID] = Some(UUID.randomUUID()),
+  timestamp: DateTime = DateTime.now(),
+  `type`: EventType = EventType.UNKNOWN,
+  data: Option[JsValue] = None
+)
 
 @Singleton
 class EventService @Inject()(
