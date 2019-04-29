@@ -31,7 +31,7 @@ class Aggregate @Inject()(
   private implicit val actorMaterializerSettings = ActorMaterializerSettings(actorSystem)
   private implicit val actorMaterializer = ActorMaterializer(actorMaterializerSettings)
 
-  val password = config.getString("write.password")
+  private val password = config.getString("write.password")
 
   def createOrUpdateMenu(menu: JsValue): IO[Either[String, Option[UUID]]] = {
     auth.checkPassword(menu, password) { isAuth =>
@@ -42,8 +42,7 @@ class Aggregate @Inject()(
         val result = for {
           targetMenuView <- OptionT.fromOption[IO](targetMenuViewOpt)
           menuViews <- OptionT.liftF(menuViewService.findByName(targetMenuView.name))
-        } yield {
-          val updatedMenuView = menuViews.headOption.fold(targetMenuView) { menuView =>
+          updatedMenuView = menuViews.headOption.fold(targetMenuView) { menuView =>
             menuView.copy(
               name = targetMenuView.name,
               ingredients = targetMenuView.ingredients,
@@ -51,15 +50,14 @@ class Aggregate @Inject()(
               link = targetMenuView.link
             )
           }
-
-          val event = Event(
-            `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
-            data = Some(Json.toJson(updatedMenuView)),
-          )
-          eventService.menuEventBus offer event
-
-          Right(updatedMenuView.uuid)
-        }
+          _ <- OptionT.liftF {
+            val event = Event(
+              `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
+              data = Some(Json.toJson(updatedMenuView)),
+            )
+            IO.fromFuture(IO(eventService.menuEventBus offer event))
+          }
+        } yield Right(updatedMenuView.uuid)
         result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
       }
     }
@@ -71,24 +69,19 @@ class Aggregate @Inject()(
         IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
       } else {
         val targetMenuUuidStrOpt = (menuUuid \ "uuid").asOpt[String]
-        IO {
-          Either.cond(
-            targetMenuUuidStrOpt.isDefined,
-            targetMenuUuidStrOpt.map { targetMenuUuidStr =>
-              val menuUuid = UUID.fromString(targetMenuUuidStr)
-              menuViewService.delete(menuUuid)
-
-              val event = Event(
-                `type` = EventType.MENU_PROFILE_DELETED,
-                data = Some(Json.toJson(menuUuid)),
-              )
-              eventService.menuEventBus offer event
-
-              menuUuid
-            },
-            ErrorResponseMessage.NO_SUCH_IDENTITY
-          )
-        }
+        val result = for {
+          targetMenuUuidStr <- OptionT.fromOption[IO](targetMenuUuidStrOpt)
+          targetMenuUuid = UUID.fromString(targetMenuUuidStr)
+          _ <- OptionT.liftF(menuViewService.delete(targetMenuUuid))
+          _ <- OptionT.liftF {
+            val event = Event(
+              `type` = EventType.MENU_PROFILE_DELETED,
+              data = Some(Json.toJson(targetMenuUuid)),
+            )
+            IO.fromFuture(IO(eventService.menuEventBus offer event))
+          }
+        } yield Right(targetMenuUuidStrOpt.map(UUID.fromString))
+        result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
       }
     }
   }
@@ -100,24 +93,16 @@ class Aggregate @Inject()(
       randomMenuView <- OptionT.fromOption[IO](Random.shuffle(menuViews).headOption)
       selectedMenuViews <- OptionT.liftF(menuViewService.findByName(randomMenuView.name))
       selectedMenu <- OptionT.fromOption[IO](selectedMenuViews.headOption)
-    } yield {
-      val updatedSelectedMenuView = selectedMenu.copy(
-        selectedCount = selectedMenu.selectedCount.map(_ + 1)
-      )
-
-      val event = Event(
-        `type` = EventType.RANDOM_MENU_ASKED,
-        data = Some(Json.toJson(updatedSelectedMenuView))
-      )
-      eventService.menuEventBus offer event
-
-      if (userViews.nonEmpty && menuViews.nonEmpty) {
-        sendEmail(updatedSelectedMenuView, userViews).unsafeRunSync()
-        Right(updatedSelectedMenuView.uuid)
-      } else {
-        Right(None)
+      updatedSelectedMenuView = selectedMenu.copy(selectedCount = selectedMenu.selectedCount.map(_ + 1))
+      _ <- OptionT.liftF(sendEmail(updatedSelectedMenuView, userViews))
+      _ <- OptionT.liftF {
+        val event = Event(
+          `type` = EventType.RANDOM_MENU_ASKED,
+          data = Some(Json.toJson(updatedSelectedMenuView))
+        )
+        IO.fromFuture(IO(eventService.menuEventBus offer event))
       }
-    }
+    } yield Right(updatedSelectedMenuView.uuid)
     result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
   }
 
