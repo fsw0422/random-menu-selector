@@ -2,10 +2,8 @@ package menu
 
 import java.util.UUID
 
-import cats.effect.IO
 import com.dimafeng.testcontainers.{FixedHostPortGenericContainer, ForAllTestContainer}
 import event.EventDao
-import javax.inject.Singleton
 import org.junit.runner.RunWith
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.junit.JUnitRunner
@@ -18,7 +16,7 @@ import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import user.{UserView, UserViewDao}
-import utils.{Email, EmailSender}
+import utils.{EmailSender, EmailSenderMock}
 
 @RunWith(classOf[JUnitRunner])
 class CommandControllerTest extends FlatSpec
@@ -122,18 +120,4 @@ class CommandControllerTest extends FlatSpec
     And("send emails to all users")
     //TODO: check with real gmail account
   }
-}
-
-@Singleton
-class EmailSenderMock extends EmailSender {
-
-  override def send(
-    smtpHost: String,
-    smtpPort: String,
-    smtpUsername: String,
-    smtpPassword: String,
-    from: String,
-    encoding: String,
-    emailDescription: Email
-  ): IO[Unit] = IO.pure(())
 }
