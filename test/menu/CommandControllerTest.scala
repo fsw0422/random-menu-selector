@@ -15,7 +15,6 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
-import play.inject.Injector
 import user.{UserView, UserViewDao}
 import utils.{EmailSender, EmailSenderMock}
 
@@ -44,7 +43,7 @@ class CommandControllerTest extends FlatSpec
 
   private val emailSenderMock = new EmailSenderMock
   private val mockedApp = new GuiceApplicationBuilder()
-    .bindings(bind[EmailSender].toInstance(emailSenderMock))
+    .overrides(bind[EmailSender].toInstance(emailSenderMock))
     .build
 
   private val eventDao = mockedApp.injector.instanceOf(classOf[EventDao])
