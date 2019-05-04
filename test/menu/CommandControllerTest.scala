@@ -15,6 +15,7 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
+import play.inject.Injector
 import user.{UserView, UserViewDao}
 import utils.{EmailSender, EmailSenderMock}
 

@@ -3,6 +3,7 @@ package utils
 import java.util.{Date, Properties}
 
 import cats.effect.IO
+import com.google.inject.AbstractModule
 import javax.inject.Singleton
 import javax.mail.internet.{InternetAddress, MimeMessage}
 import javax.mail.{Address, Message, Session}
@@ -76,4 +77,11 @@ class EmailSenderMock extends EmailSender {
     encoding: String,
     emailDescription: Email
   ): IO[Unit] = IO.pure(())
+}
+
+class EmailSenderModule extends AbstractModule {
+
+  override def configure(): Unit = {
+    bind(classOf[EmailSender]).to(classOf[EmailSenderImpl])
+  }
 }
