@@ -29,59 +29,47 @@ class Aggregate @Inject()(
   private val password = config.getString("write.password")
 
   def createOrUpdateUser(user: JsValue): IO[Either[String, Option[UUID]]] = {
-    auth.checkPassword(user, password) { isAuth =>
-      if (!isAuth) {
-        IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
-      } else {
-        val newUserViewOpt = user.asOpt[UserView]
-        val result = for {
-          newUserView <- OptionT.fromOption[IO](newUserViewOpt)
-          userViews <- OptionT.liftF(userViewService.findByEmail(newUserView.email))
-          updatedUserView = userViews.headOption.fold(newUserView)(oldUserView => update(oldUserView, newUserView))
-          _ <- OptionT.liftF {
-            val event = Event(
-              `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
-              data = Some(Json.toJson(updatedUserView)),
-            )
-            IO.fromFuture(IO(eventService.userEventBus offer event))
-          }
-        } yield Right(updatedUserView.uuid)
-        result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
-      }
+    auth.fold(user, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+      val newUserViewOpt = user.asOpt[UserView]
+      val result = for {
+        newUserView <- OptionT.fromOption[IO](newUserViewOpt)
+        userViews <- OptionT.liftF(userViewService.findByEmail(newUserView.email))
+        updatedUserView = userViews.headOption.fold(newUserView)(oldUserView => update(oldUserView, newUserView))
+        _ <- OptionT.liftF {
+          val event = Event(
+            `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
+            data = Some(Json.toJson(updatedUserView)),
+          )
+          IO.fromFuture(IO(eventService.userEventBus offer event))
+        }
+      } yield Right(updatedUserView.uuid)
+      result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
     }
   }
 
-  def deleteUser(user: JsValue): IO[Either[String, Option[UUID]]] = {
-    auth.checkPassword(user, password) { isAuth =>
-      if (!isAuth) {
-        IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
-      } else {
-        val targetUserUuidStrOpt = (user \ "uuid").asOpt[String]
-        val result = for {
-          targetUserUuidStr <- OptionT.fromOption[IO](targetUserUuidStrOpt)
-          targetUserUuid = UUID.fromString(targetUserUuidStr)
-          _ <- OptionT.liftF(userViewService.delete(targetUserUuid))
-          _ <- OptionT.liftF {
-            val event = Event(
-              `type` = EventType.USER_PROFILE_DELETED,
-              data = Some(Json.toJson(targetUserUuid)),
-            )
-            IO.fromFuture(IO(eventService.menuEventBus offer event))
-          }
-        } yield Right(targetUserUuidStrOpt.map(UUID.fromString))
-        result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
-      }
+  def deleteUser(userUuid: JsValue): IO[Either[String, Option[UUID]]] = {
+    auth.fold(userUuid, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+      val targetUserUuidStrOpt = (userUuid \ "uuid").asOpt[String]
+      val result = for {
+        targetUserUuidStr <- OptionT.fromOption[IO](targetUserUuidStrOpt)
+        targetUserUuid = UUID.fromString(targetUserUuidStr)
+        _ <- OptionT.liftF(userViewService.delete(targetUserUuid))
+        _ <- OptionT.liftF {
+          val event = Event(
+            `type` = EventType.USER_PROFILE_DELETED,
+            data = Some(Json.toJson(targetUserUuid)),
+          )
+          IO.fromFuture(IO(eventService.menuEventBus offer event))
+        }
+      } yield Right(targetUserUuidStrOpt.map(UUID.fromString))
+      result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
     }
   }
 
   def createOrUpdateUserViewSchema(version: JsValue): IO[Either[String, QueueOfferResult]] = {
-    auth.checkPassword(version, password) { isAuth =>
-      if (!isAuth) {
-        IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
-      } else {
-        val event = Event(`type` = EventType.USER_SCHEMA_EVOLVED, data = Some(version))
-        IO.fromFuture(IO((eventService.userEventBus offer event).map(Right(_))))
-      }
+    auth.fold(version, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+      val event = Event(`type` = EventType.USER_SCHEMA_EVOLVED, data = Some(version))
+      IO.fromFuture(IO((eventService.userEventBus offer event).map(Right(_))))
     }
   }
 

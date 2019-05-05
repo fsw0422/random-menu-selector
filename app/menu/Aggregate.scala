@@ -34,48 +34,40 @@ class Aggregate @Inject()(
   private val password = config.getString("write.password")
 
   def createOrUpdateMenu(menu: JsValue): IO[Either[String, Option[UUID]]] = {
-    auth.checkPassword(menu, password) { isAuth =>
-      if (!isAuth) {
-        IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
-      } else {
-        val newMenuViewOpt = menu.asOpt[MenuView]
-        val result = for {
-          newMenuView <- OptionT.fromOption[IO](newMenuViewOpt)
-          menuViews <- OptionT.liftF(menuViewService.findByName(newMenuView.name))
-          updatedMenuView = menuViews.headOption.fold(newMenuView)(oldMenuView => update(oldMenuView, newMenuView))
-          _ <- OptionT.liftF {
-            val event = Event(
-              `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
-              data = Some(Json.toJson(updatedMenuView)),
-            )
-            IO.fromFuture(IO(eventService.menuEventBus offer event))
-          }
-        } yield Right(updatedMenuView.uuid)
-        result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
-      }
+    auth.fold(menu, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+      val newMenuViewOpt = menu.asOpt[MenuView]
+      val result = for {
+        newMenuView <- OptionT.fromOption[IO](newMenuViewOpt)
+        menuViews <- OptionT.liftF(menuViewService.findByName(newMenuView.name))
+        updatedMenuView = menuViews.headOption.fold(newMenuView)(oldMenuView => update(oldMenuView, newMenuView))
+        _ <- OptionT.liftF {
+          val event = Event(
+            `type` = EventType.MENU_PROFILE_CREATED_OR_UPDATED,
+            data = Some(Json.toJson(updatedMenuView)),
+          )
+          IO.fromFuture(IO(eventService.menuEventBus offer event))
+        }
+      } yield Right(updatedMenuView.uuid)
+      result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
     }
   }
 
   def deleteMenu(menuUuid: JsValue): IO[Either[String, Option[UUID]]] = {
-    auth.checkPassword(menuUuid, password) { isAuth =>
-      if (!isAuth) {
-        IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
-      } else {
-        val targetMenuUuidStrOpt = (menuUuid \ "uuid").asOpt[String]
-        val result = for {
-          targetMenuUuidStr <- OptionT.fromOption[IO](targetMenuUuidStrOpt)
-          targetMenuUuid = UUID.fromString(targetMenuUuidStr)
-          _ <- OptionT.liftF(menuViewService.delete(targetMenuUuid))
-          _ <- OptionT.liftF {
-            val event = Event(
-              `type` = EventType.MENU_PROFILE_DELETED,
-              data = Some(Json.toJson(targetMenuUuid)),
-            )
-            IO.fromFuture(IO(eventService.menuEventBus offer event))
-          }
-        } yield Right(targetMenuUuidStrOpt.map(UUID.fromString))
-        result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
-      }
+    auth.fold(menuUuid, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+      val targetMenuUuidStrOpt = (menuUuid \ "uuid").asOpt[String]
+      val result = for {
+        targetMenuUuidStr <- OptionT.fromOption[IO](targetMenuUuidStrOpt)
+        targetMenuUuid = UUID.fromString(targetMenuUuidStr)
+        _ <- OptionT.liftF(menuViewService.delete(targetMenuUuid))
+        _ <- OptionT.liftF {
+          val event = Event(
+            `type` = EventType.MENU_PROFILE_DELETED,
+            data = Some(Json.toJson(targetMenuUuid)),
+          )
+          IO.fromFuture(IO(eventService.menuEventBus offer event))
+        }
+      } yield Right(targetMenuUuidStrOpt.map(UUID.fromString))
+      result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
     }
   }
 
@@ -100,13 +92,9 @@ class Aggregate @Inject()(
   }
 
   def createOrUpdateMenuViewSchema(version: JsValue): IO[Either[String, QueueOfferResult]] = {
-    auth.checkPassword(version, password) { isAuth =>
-      if (!isAuth) {
-        IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))
-      } else {
-        val event = Event(`type` = EventType.MENU_SCHEMA_EVOLVED, data = Some(version))
-        IO.fromFuture(IO((eventService.menuEventBus offer event).map(Right(_))))
-      }
+    auth.fold(version, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+      val event = Event(`type` = EventType.MENU_SCHEMA_EVOLVED, data = Some(version))
+      IO.fromFuture(IO((eventService.menuEventBus offer event).map(Right(_))))
     }
   }
 

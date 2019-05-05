@@ -4,18 +4,19 @@ import cats.effect.IO
 import javax.inject.Singleton
 import play.api.libs.json.JsValue
 
-import scala.concurrent.ExecutionContext
-
 @Singleton
 class Auth {
 
-  def checkPassword[R](requestBody: JsValue, password: String)
-    (action: Boolean => IO[Either[String, R]])
-    (implicit executionContext: ExecutionContext): IO[Either[String, R]] = {
+  def fold[R](requestBody: JsValue, password: String)
+    (accessDenied: => IO[Either[String, R]])
+    (accessGranted: => IO[Either[String, R]]): IO[Either[String, R]] = {
     val attemptedPasswordOpt = (requestBody \ "password").asOpt[String]
-    val isAuth = attemptedPasswordOpt.fold(false) { attemptedPassword =>
-      attemptedPassword == password
+    attemptedPasswordOpt.fold(accessDenied) { attemptedPassword =>
+      if (attemptedPassword == password) {
+        accessGranted
+      } else {
+        accessDenied
+      }
     }
-    action.apply(isAuth)
   }
 }
