@@ -4,6 +4,7 @@ import java.util.UUID
 
 import com.dimafeng.testcontainers.{FixedHostPortGenericContainer, ForAllTestContainer}
 import event.EventDao
+import mocks.EmailSenderMock
 import org.junit.runner.RunWith
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.junit.JUnitRunner
@@ -16,7 +17,7 @@ import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import user.{UserView, UserViewDao}
-import utils.{EmailSender, EmailSenderMock}
+import utils.EmailSender
 
 @RunWith(classOf[JUnitRunner])
 class CommandControllerTest extends FlatSpec

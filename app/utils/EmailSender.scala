@@ -65,20 +65,6 @@ class EmailSenderImpl extends EmailSender {
   }
 }
 
-@Singleton
-class EmailSenderMock extends EmailSender {
-
-  override def send(
-    smtpHost: String,
-    smtpPort: String,
-    smtpUsername: String,
-    smtpPassword: String,
-    from: String,
-    encoding: String,
-    emailDescription: Email
-  ): IO[Unit] = IO.pure(())
-}
-
 class EmailSenderModule extends AbstractModule {
 
   override def configure(): Unit = {
