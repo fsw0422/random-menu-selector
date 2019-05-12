@@ -1,2 +1,5 @@
 language: scala
+cache:
+  directories:
+    - $HOME/.ivy2
 script: cicd/ci.sh
