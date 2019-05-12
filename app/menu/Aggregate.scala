@@ -34,7 +34,7 @@ class Aggregate @Inject()(
   private val password = config.getString("write.password")
 
   def createOrUpdateMenu(menu: JsValue): IO[Either[String, Option[UUID]]] = {
-    auth.fold(menu, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+    auth.authenticate(menu, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
       val newMenuViewOpt = menu.asOpt[MenuView]
       val result = for {
         newMenuView <- OptionT.fromOption[IO](newMenuViewOpt)
@@ -53,7 +53,7 @@ class Aggregate @Inject()(
   }
 
   def deleteMenu(menuUuid: JsValue): IO[Either[String, Option[UUID]]] = {
-    auth.fold(menuUuid, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+    auth.authenticate(menuUuid, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
       val targetMenuUuidStrOpt = (menuUuid \ "uuid").asOpt[String]
       val result = for {
         targetMenuUuidStr <- OptionT.fromOption[IO](targetMenuUuidStrOpt)
@@ -92,7 +92,7 @@ class Aggregate @Inject()(
   }
 
   def createOrUpdateMenuViewSchema(version: JsValue): IO[Either[String, QueueOfferResult]] = {
-    auth.fold(version, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+    auth.authenticate(version, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
       val event = Event(`type` = EventType.MENU_SCHEMA_EVOLVED, data = Some(version))
       IO.fromFuture(IO((eventService.menuEventBus offer event).map(Right(_))))
     }

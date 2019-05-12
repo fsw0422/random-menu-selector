@@ -29,7 +29,7 @@ class Aggregate @Inject()(
   private val password = config.getString("write.password")
 
   def createOrUpdateUser(user: JsValue): IO[Either[String, Option[UUID]]] = {
-    auth.fold(user, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+    auth.authenticate(user, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
       val newUserViewOpt = user.asOpt[UserView]
       val result = for {
         newUserView <- OptionT.fromOption[IO](newUserViewOpt)
@@ -48,7 +48,7 @@ class Aggregate @Inject()(
   }
 
   def deleteUser(userUuid: JsValue): IO[Either[String, Option[UUID]]] = {
-    auth.fold(userUuid, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+    auth.authenticate(userUuid, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
       val targetUserUuidStrOpt = (userUuid \ "uuid").asOpt[String]
       val result = for {
         targetUserUuidStr <- OptionT.fromOption[IO](targetUserUuidStrOpt)
@@ -67,7 +67,7 @@ class Aggregate @Inject()(
   }
 
   def createOrUpdateUserViewSchema(version: JsValue): IO[Either[String, QueueOfferResult]] = {
-    auth.fold(version, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+    auth.authenticate(version, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
       val event = Event(`type` = EventType.USER_SCHEMA_EVOLVED, data = Some(version))
       IO.fromFuture(IO((eventService.userEventBus offer event).map(Right(_))))
     }

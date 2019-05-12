@@ -7,7 +7,7 @@ import play.api.libs.json.JsValue
 @Singleton
 class Auth {
 
-  def fold[R](requestBody: JsValue, password: String)
+  def authenticate[R](requestBody: JsValue, password: String)
     (accessDenied: => IO[Either[String, R]])
     (accessGranted: => IO[Either[String, R]]): IO[Either[String, R]] = {
     val attemptedPasswordOpt = (requestBody \ "password").asOpt[String]
