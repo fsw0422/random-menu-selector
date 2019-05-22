@@ -2,7 +2,7 @@ package menu
 
 import java.util.UUID
 
-import com.dimafeng.testcontainers.{FixedHostPortGenericContainer, ForAllTestContainer}
+import com.dimafeng.testcontainers.{ForAllTestContainer, GenericContainer}
 import event.EventDao
 import mocks.EmailSenderMock
 import org.junit.runner.RunWith
@@ -10,6 +10,7 @@ import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfter, FlatSpec, GivenWhenThen, Matchers}
 import org.testcontainers.containers.wait.strategy.Wait
+import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
@@ -31,27 +32,44 @@ class CommandControllerTest extends FlatSpec
 
   private val envMap = sys.props.toMap
 
-  override val container = FixedHostPortGenericContainer(
-    "postgres:9.6",
+  private var mockedApp: Application = _
+  private var eventDao: EventDao = _
+  private var menuViewDao: MenuViewDao = _
+  private var userViewDao: UserViewDao = _
+
+  private val POSTGRES_EXPOSED_PORT = 5432
+
+  override val container = GenericContainer(
+    dockerImage = "postgres:9.6",
+    exposedPorts = Seq(POSTGRES_EXPOSED_PORT),
     waitStrategy = Wait.forLogMessage(".*database system is ready to accept connections.*\\s", 2),
-    exposedHostPort = envMap("POSTGRES_PORT").toInt,
-    exposedContainerPort = 5432,
     env = Map(
       "POSTGRES_PASSWORD" -> envMap("POSTGRES_PASSWORD"),
       "POSTGRES_DB" -> envMap("POSTGRES_DB")
     )
   )
 
-  private val emailSenderMock = new EmailSenderMock
-  private val mockedApp = new GuiceApplicationBuilder()
-    .overrides(bind[EmailSender].toInstance(emailSenderMock))
-    .build
+  override def afterStart: Unit = {
+    // override environmental variables with randomized infrastructural host / port
+    sys.props += (
+      "POSTGRES_HOST" -> container.containerIpAddress,
+      "POSTGRES_PORT" -> container.mappedPort(POSTGRES_EXPOSED_PORT).toString
+    )
 
-  private val eventDao = mockedApp.injector.instanceOf(classOf[EventDao])
-  private val menuViewDao = mockedApp.injector.instanceOf(classOf[MenuViewDao])
-  private val userViewDao = mockedApp.injector.instanceOf(classOf[UserViewDao])
+    val emailSenderMock = new EmailSenderMock
+    mockedApp = GuiceApplicationBuilder()
+      .overrides(bind[EmailSender].toInstance(emailSenderMock))
+      .build
+    eventDao = mockedApp.injector.instanceOf(classOf[EventDao])
+    menuViewDao = mockedApp.injector.instanceOf(classOf[MenuViewDao])
+    userViewDao = mockedApp.injector.instanceOf(classOf[UserViewDao])
+  }
 
-  private implicit val dispatcher = mockedApp.actorSystem.dispatcher
+  override def beforeStop: Unit = {
+    // stop app first since it may fail the test if it encounters error from lost connections to infrastructures
+    mockedApp.stop()
+  }
+
 
   before {
     eventDao.setup().unsafeRunSync()
