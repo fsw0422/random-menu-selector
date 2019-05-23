@@ -3,57 +3,31 @@ package utils
 import java.util.{Date, Properties}
 
 import cats.effect.IO
-import com.google.inject.AbstractModule
 import javax.inject.Singleton
 import javax.mail.internet.{InternetAddress, MimeMessage}
 import javax.mail.{Address, Message, Session}
 
-final case class Email(emails: Array[String], subject: String, message: String)
-
-trait EmailSender {
-
-  def send(
-    smtpHost: String,
-    smtpPort: String,
-    smtpUsername: String,
-    smtpPassword: String,
-    from: String,
-    encoding: String,
-    emailDescription: Email
-  ): IO[Unit]
-}
+final case class Email(recipients: Array[String], subject: String, message: String)
 
 @Singleton
-class EmailSenderImpl extends EmailSender {
+class EmailSender {
 
-  override def send(
-    smtpHost: String,
-    smtpPort: String,
+  def sendSMTP(
     smtpUsername: String,
     smtpPassword: String,
-    from: String,
-    encoding: String,
+    smtpProperties: Properties,
     emailDescription: Email
   ): IO[Unit] = IO {
-    val props = new Properties()
-    props.put("mail.smtps.host", smtpHost)
-    props.put("mail.smtps.port", smtpPort)
-    props.put("mail.smtps.starttls.enable", "true")
-    props.put("mail.smtps.ssl.checkserveridentity", "false")
-    props.put("mail.smtps.ssl.trust", "*")
-
-    val session = Session.getInstance(props)
-
+    val session = Session.getInstance(smtpProperties)
     val message = new MimeMessage(session)
-    message.setFrom(new InternetAddress(from))
-    val to = emailDescription.emails.map { email =>
+    val recipients = emailDescription.recipients.map { email =>
       val address: Address = new InternetAddress(email)
       address
     }
-    message.setRecipients(Message.RecipientType.TO, to)
+    message.setRecipients(Message.RecipientType.TO, recipients)
     message.setSentDate(new Date())
-    message.setSubject(emailDescription.subject, encoding)
-    message.setContent(emailDescription.message, encoding)
+    message.setSubject(emailDescription.subject, EmailProperty.HTML_UTF8_ENCODING)
+    message.setContent(emailDescription.message, EmailProperty.HTML_UTF8_ENCODING)
 
     val transport = session.getTransport("smtps")
     try {
@@ -65,9 +39,16 @@ class EmailSenderImpl extends EmailSender {
   }
 }
 
-class EmailSenderModule extends AbstractModule {
+object EmailProperty {
+  val HTML_UTF8_ENCODING = "text/html; charset=utf-8"
 
-  override def configure(): Unit = {
-    bind(classOf[EmailSender]).to(classOf[EmailSenderImpl])
+  val gmailProperties = {
+    val gmailProps = new Properties()
+    gmailProps.put("mail.smtps.host", "smtp.gmail.com")
+    gmailProps.put("mail.smtps.port", "465")
+    gmailProps.put("mail.smtps.starttls.enable", "true")
+    gmailProps.put("mail.smtps.ssl.checkserveridentity", "false")
+    gmailProps.put("mail.smtps.ssl.trust", "*")
+    gmailProps
   }
 }
