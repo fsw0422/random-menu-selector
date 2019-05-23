@@ -12,7 +12,7 @@ import event.{Event, EventService, EventType}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json}
 import user.{UserView, UserViewService}
-import utils.{Email, EmailSender, ErrorResponseMessage}
+import utils.{Email, EmailProperty, EmailSender, ErrorResponseMessage}
 
 import scala.util.Random
 
@@ -31,10 +31,12 @@ class Aggregate @Inject()(
   private implicit val actorMaterializerSettings = ActorMaterializerSettings(actorSystem)
   private implicit val actorMaterializer = ActorMaterializer(actorMaterializerSettings)
 
-  private val password = config.getString("write.password")
+  private val writePassword = config.getString("write.password")
+  private val emailUser = config.getString("email.user")
+  private val emailPassword = config.getString("email.password")
 
   def createOrUpdateMenu(menu: JsValue): IO[Either[String, Option[UUID]]] = {
-    auth.authenticate(menu, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+    auth.authenticate(menu, writePassword)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
       val newMenuViewOpt = menu.asOpt[MenuView]
       val result = for {
         newMenuView <- OptionT.fromOption[IO](newMenuViewOpt)
@@ -53,7 +55,7 @@ class Aggregate @Inject()(
   }
 
   def deleteMenu(menuUuid: JsValue): IO[Either[String, Option[UUID]]] = {
-    auth.authenticate(menuUuid, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+    auth.authenticate(menuUuid, writePassword)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
       val targetMenuUuidStrOpt = (menuUuid \ "uuid").asOpt[String]
       val result = for {
         targetMenuUuidStr <- OptionT.fromOption[IO](targetMenuUuidStrOpt)
@@ -79,7 +81,7 @@ class Aggregate @Inject()(
       selectedMenuViews <- OptionT.liftF(menuViewService.findByName(randomMenuView.name))
       selectedMenu <- OptionT.fromOption[IO](selectedMenuViews.headOption)
       updatedSelectedMenuView = incrementSelectedCount(selectedMenu)
-      _ <- OptionT.liftF(sendEmail(updatedSelectedMenuView, userViews))
+      _ <- OptionT.liftF(sendMenusToAllUsers(updatedSelectedMenuView, userViews))
       _ <- OptionT.liftF {
         val event = Event(
           `type` = EventType.RANDOM_MENU_ASKED,
@@ -92,7 +94,7 @@ class Aggregate @Inject()(
   }
 
   def createOrUpdateMenuViewSchema(version: JsValue): IO[Either[String, QueueOfferResult]] = {
-    auth.authenticate(version, password)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+    auth.authenticate(version, writePassword)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
       val event = Event(`type` = EventType.MENU_SCHEMA_EVOLVED, data = Some(version))
       IO.fromFuture(IO((eventService.menuEventBus offer event).map(Right(_))))
     }
@@ -121,16 +123,13 @@ class Aggregate @Inject()(
     selectedCountIncremented
   }
 
-  private def sendEmail(menu: MenuView, users: Seq[UserView]): IO[Unit] = {
-    emailSender.send(
-      "smtp.gmail.com",
-      "465",
-      "menuselector0501",
-      config.getString("email.password"),
-      "menuselector0501@gmail.com",
-      "text/html; charset=utf-8",
+  private def sendMenusToAllUsers(menu: MenuView, users: Seq[UserView]): IO[Unit] = {
+    emailSender.sendSMTP(
+      emailUser,
+      emailPassword,
+      EmailProperty.gmailProperties,
       Email(
-        emails = users.map(user => user.email).toArray,
+        recipients = users.map(user => user.email).toArray,
         subject = "Today's Menu",
         message = s"""
         <html>
