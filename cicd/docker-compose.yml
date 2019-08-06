@@ -4,7 +4,7 @@ services:
     image: "fsw0422/random-menu-selector:latest"
     restart: always
     ports:
-      - "9000:9000"
+      - "9443:9443"
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_HOST=${POSTGRES_HOST}
