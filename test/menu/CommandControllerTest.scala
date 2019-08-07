@@ -67,7 +67,7 @@ class CommandControllerTest extends FlatSpec
 
   override def beforeStop: Unit = {
     // stop app first since it may fail the test if it encounters error from lost connections to infrastructures
-     mockedApp.stop()
+    mockedApp.stop()
   }
 
   before {
