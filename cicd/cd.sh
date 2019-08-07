@@ -1,9 +1,7 @@
 #!/bin/bash
 
 sbt docker:publish
-echo "enter hostname:"
-read host
-ssh kev@${host} <<-EOF
+ssh kev@$fsw0422.com <<-EOF
 	git clone https://github.com/fsw0422/random-menu-selector || git -C ~/random-menu-selector pull
 	docker-compose -f ~/random-menu-selector/cicd/docker-compose.yml pull
 	docker-compose -f ~/random-menu-selector/cicd/docker-compose.yml down
