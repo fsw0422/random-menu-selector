@@ -3,7 +3,6 @@
   <include resource="logback-base.xml" />
 
   <root level="DEBUG">
-    <appender-ref ref="FILE_ASYNC"/>
     <appender-ref ref="STDOUT_ASYNC"/>
   </root>
 
