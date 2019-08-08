@@ -35,7 +35,7 @@ libraryDependencies ++= Seq(
 )
 
 lazy val RandomMenuSelector = (project in file("."))
-  .enablePlugins(PlayScala)
+  .enablePlugins(PlayScala, PlayAkkaHttp2Support)
   .enablePlugins(DockerPlugin)
   .enablePlugins(ClasspathJarPlugin)
 
