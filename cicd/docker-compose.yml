@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   random-menu-selector:
     image: "fsw0422/random-menu-selector:latest"
