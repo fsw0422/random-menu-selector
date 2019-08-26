@@ -73,10 +73,15 @@ class Aggregate @Inject()(
     }
   }
 
-  private def update(oldUserView: UserView, newUserView: UserView): UserView = {
-    oldUserView.copy(
-      email = newUserView.email,
-      name = newUserView.name
-    )
+  private def update(initialUserView: UserView, userView: UserView): UserView = {
+    val updatedState = State[UserView, Unit] { oldUserView =>
+      val newUserView = oldUserView.copy(
+        email = userView.email,
+        name = userView.name
+      )
+      (newUserView, ())
+    }
+    val (updated, void) = updatedState.run(initialUserView).value
+    updated
   }
 }

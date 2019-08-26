@@ -100,13 +100,18 @@ class Aggregate @Inject()(
     }
   }
 
-  private def update(oldMenuView: MenuView, newMenuView: MenuView): MenuView = {
-    oldMenuView.copy(
-      name = newMenuView.name,
-      ingredients = newMenuView.ingredients,
-      recipe = newMenuView.recipe,
-      link = newMenuView.link
-    )
+  private def update(initialMenuView: MenuView, menuView: MenuView): MenuView = {
+    val updatedState = State[MenuView, Unit] { oldMenuView =>
+      val newMenuView = oldMenuView.copy(
+        name = menuView.name,
+        ingredients = menuView.ingredients,
+        recipe = menuView.recipe,
+        link = menuView.link
+      )
+      (newMenuView, ())
+    }
+    val (updated, void) = updatedState.run(initialMenuView).value
+    updated
   }
 
   private def incrementSelectedCount(initialMenuView: MenuView): MenuView = {
