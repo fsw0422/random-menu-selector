@@ -92,9 +92,7 @@ class MenuViewDao extends Db with LazyLogging {
   }
 
   def upsert(menuView: MenuView): IO[Unit] = IO.fromFuture {
-    logger.info(s"""${menuView.name} has been saved (outside IO)""")
     IO {
-      logger.info(s"""${menuView.name} has been saved (inside IO)""")
       db.run(menuViewTable.insertOrUpdate(menuView))
         .map(_ => ())
     }
