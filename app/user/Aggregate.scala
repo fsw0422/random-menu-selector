@@ -3,12 +3,12 @@ package user
 import java.util.UUID
 
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, QueueOfferResult}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import auth.Auth
 import cats.data.{OptionT, State}
 import cats.effect.IO
 import com.typesafe.config.Config
-import event.{Event, EventService, EventType}
+import event.{Event, EventDao, EventType}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json}
 import utils.ErrorResponseMessage
@@ -17,8 +17,8 @@ import utils.ErrorResponseMessage
 class Aggregate @Inject()(
   config: Config,
   auth: Auth,
-  eventService: EventService,
-  userViewService: UserViewService
+  eventDao: EventDao,
+  userViewDao: UserViewDao
 ) {
 
   private implicit val actorSystem = ActorSystem("UserAggregate")
@@ -33,14 +33,14 @@ class Aggregate @Inject()(
       val newUserViewOpt = user.asOpt[UserView]
       val result = for {
         newUserView <- OptionT.fromOption[IO](newUserViewOpt)
-        userViews <- OptionT.liftF(userViewService.findByEmail(newUserView.email))
+        userViews <- OptionT.liftF(userViewDao.findByEmail(newUserView.email))
         updatedUserView = userViews.headOption.fold(newUserView)(oldUserView => update(oldUserView, newUserView))
         _ <- OptionT.liftF {
           val event = Event(
             `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
             data = Some(Json.toJson(updatedUserView)),
           )
-          IO.fromFuture(IO(eventService.userEventBus offer event))
+          eventDao.insert(event)
         }
       } yield Right(updatedUserView.uuid)
       result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
@@ -53,23 +53,16 @@ class Aggregate @Inject()(
       val result = for {
         targetUserUuidStr <- OptionT.fromOption[IO](targetUserUuidStrOpt)
         targetUserUuid = UUID.fromString(targetUserUuidStr)
-        _ <- OptionT.liftF(userViewService.delete(targetUserUuid))
+        _ <- OptionT.liftF(userViewDao.delete(targetUserUuid))
         _ <- OptionT.liftF {
           val event = Event(
             `type` = EventType.USER_PROFILE_DELETED,
             data = Some(Json.toJson(targetUserUuid)),
           )
-          IO.fromFuture(IO(eventService.menuEventBus offer event))
+          eventDao.insert(event)
         }
       } yield Right(targetUserUuidStrOpt.map(UUID.fromString))
       result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
-    }
-  }
-
-  def createOrUpdateUserViewSchema(version: JsValue): IO[Either[String, QueueOfferResult]] = {
-    auth.authenticate(version, writePassword)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
-      val event = Event(`type` = EventType.USER_SCHEMA_EVOLVED, data = Some(version))
-      IO.fromFuture(IO((eventService.userEventBus offer event).map(Right(_))))
     }
   }
 

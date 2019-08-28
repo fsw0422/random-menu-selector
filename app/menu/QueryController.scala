@@ -5,13 +5,13 @@ import play.api.libs.json.Json
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 
 @Singleton
-class QueryController @Inject()(menuViewService: MenuViewService)
+class QueryController @Inject()(menuViewDao: MenuViewDao)
   (implicit controllerComponents: ControllerComponents)
   extends AbstractController(controllerComponents) {
 
   def getMenusByNameLike(name: String): Action[AnyContent] = {
     Action.async { implicit request =>
-      menuViewService.findByNameLike(name).map { menuViews =>
+      menuViewDao.findByNameLike(name).map { menuViews =>
         Ok(Json.obj("result" -> Json.toJson(menuViews)))
       }.unsafeToFuture()
     }

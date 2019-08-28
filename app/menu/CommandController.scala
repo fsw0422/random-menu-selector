@@ -44,15 +44,4 @@ class CommandController @Inject()(aggregate: Aggregate)
       }.unsafeToFuture()
     }
   }
-
-  def createOrUpdateMenuViewSchema(): Action[JsValue] = {
-    Action.async(parse.json) { implicit request =>
-      aggregate.createOrUpdateMenuViewSchema(request.body).map {
-        case Left(message: String) =>
-          Ok(Json.obj("result" -> Json.toJson(message)))
-        case Right(queueOfferResult: QueueOfferResult) =>
-          Ok(Json.obj("result" -> Json.toJson(queueOfferResult.toString)))
-      }.unsafeToFuture()
-    }
-  }
 }

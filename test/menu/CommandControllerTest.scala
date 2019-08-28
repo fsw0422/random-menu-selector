@@ -96,7 +96,7 @@ class CommandControllerTest extends FlatSpec
     // service-owned infrastructure setup
     Given("an apple pie and pear pie")
     val applePieUuid = UUID.fromString("123e4567-e89b-12d3-a456-426655440000")
-    val applePieView = MenuView(
+    val applePieView = Menu(
       Some(applePieUuid),
       "ApplePie",
       Seq("apple", "pie"),
@@ -105,7 +105,7 @@ class CommandControllerTest extends FlatSpec
     )
     menuViewDao.upsert(applePieView).unsafeRunSync()
     val pearPieUuid = UUID.fromString("223e4567-e89b-12d3-a456-426655440000")
-    val pearPieView = MenuView(
+    val pearPieView = Menu(
       Some(pearPieUuid),
       "PearPie",
       Seq("pear", "pie"),
