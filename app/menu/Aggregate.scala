@@ -2,8 +2,6 @@ package menu
 
 import java.util.UUID
 
-import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import auth.Auth
 import cats.data.{OptionT, State}
 import cats.effect.IO
@@ -11,10 +9,26 @@ import com.typesafe.config.Config
 import event.{Event, EventDao, EventType}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json}
-import user.{UserView, UserViewDao}
+import user.{User, UserViewDao}
 import utils.{Email, EmailProperty, EmailSender, ErrorResponseMessage}
 
 import scala.util.Random
+
+final case class Menu(
+  uuid: Option[UUID] = Some(UUID.randomUUID()),
+  name: String,
+  ingredients: Seq[String],
+  recipe: String,
+  link: String,
+  selectedCount: Option[Int] = Some(0)
+)
+
+object Menu {
+
+  implicit val jsonFormatter = Json
+    .using[Json.WithDefaultValues]
+    .format[Menu]
+}
 
 @Singleton
 class Aggregate @Inject()(
@@ -75,22 +89,22 @@ class Aggregate @Inject()(
       randomMenuView <- OptionT.fromOption[IO](Random.shuffle(menus).headOption)
       selectedMenuViews <- OptionT.liftF(menuViewDao.findByName(randomMenuView.name))
       selectedMenu <- OptionT.fromOption[IO](selectedMenuViews.headOption)
-      updatedSelectedMenuView = incrementSelectedCount(selectedMenu)
+      updatedSelectedMenu = incrementSelectedCount(selectedMenu)
       res <- OptionT.liftF {
         val event = Event(
           `type` = EventType.RANDOM_MENU_ASKED,
-          data = Some(Json.toJson(updatedSelectedMenuView))
+          data = Some(Json.toJson(updatedSelectedMenu))
         )
         eventDao.insert(event)
       }
       // TODO: from here should be updated by an event as separate module
-      _ <- OptionT.liftF(sendMenusToAllUsers(updatedSelectedMenuView, userViews))
-      _ <- OptionT.liftF(menuViewDao.upsert(updatedSelectedMenuView))
+      _ <- OptionT.liftF(menuViewDao.upsert(updatedSelectedMenu))
+      _ <- OptionT.liftF(sendMenusToAllUsers(updatedSelectedMenu, userViews))
     } yield Right(res)
     result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
   }
 
-  //TODO: tryo to find a way to compose rather than running
+  //TODO: try to find a way to compose rather than running
   private def update(initialMenuView: Menu, menu: Menu): Menu = {
     val updatedState = State[Menu, Unit] { oldMenuView =>
       val newMenuView = oldMenuView.copy(
@@ -105,7 +119,7 @@ class Aggregate @Inject()(
     updated
   }
 
-  //TODO: tryo to find a way to compose rather than running
+  //TODO: try to find a way to compose rather than running
   private def incrementSelectedCount(initialMenuView: Menu): Menu = {
     val selectedCountIncrementedState = State[Menu, Unit] { oldMenuView =>
       val newMenuView = oldMenuView.copy(selectedCount = oldMenuView.selectedCount.map(_ + 1))
@@ -115,7 +129,7 @@ class Aggregate @Inject()(
     selectedCountIncremented
   }
 
-  private def sendMenusToAllUsers(menu: Menu, users: Seq[UserView]): IO[Unit] = {
+  private def sendMenusToAllUsers(menu: Menu, users: Seq[User]): IO[Unit] = {
     emailSender.sendSMTP(
       emailUser,
       emailPassword,

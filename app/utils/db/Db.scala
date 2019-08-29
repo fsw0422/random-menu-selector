@@ -11,7 +11,7 @@ trait Db {
 
   protected implicit val ioExecutor = db.ioExecutionContext
 
-  def setup(): IO[Unit]
+  def setup(): IO[Int]
 
   def teardown(): IO[Unit]
 }

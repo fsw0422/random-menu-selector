@@ -5,32 +5,17 @@ import java.util.UUID
 import cats.effect.IO
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Singleton
-import play.api.libs.json._
 import utils.db.Db
-
-final case class Menu(
-  uuid: Option[UUID] = Some(UUID.randomUUID()),
-  name: String,
-  ingredients: Seq[String],
-  recipe: String,
-  link: String,
-  selectedCount: Option[Int] = Some(0)
-)
-
-object Menu {
-
-  implicit val jsonFormatter = Json
-    .using[Json.WithDefaultValues]
-    .format[Menu]
-}
 
 @Singleton
 class MenuViewDao extends Db with LazyLogging {
 
   import utils.db.PostgresProfile.api._
 
+  val tableName = "menu_view"
+
   class MenuViewTable(tag: Tag)
-      extends Table[Menu](tag, "menu_view") {
+    extends Table[Menu](tag, tableName) {
     def uuid = column[UUID]("uuid", O.PrimaryKey)
     def name = column[String]("name")
     def ingredients = column[Seq[String]]("ingredients")
@@ -44,11 +29,8 @@ class MenuViewDao extends Db with LazyLogging {
 
   private val menuViewTable = TableQuery[MenuViewTable]
 
-  override def setup(): IO[Unit] = IO.fromFuture {
-    IO {
-      db.run(sqlu"""CREATE TABLE IF NOT EXISTS #menu_view()""")
-        .map(_ => ())
-    }
+  override def setup(): IO[Int] = IO.fromFuture {
+    IO { db.run(sqlu"""CREATE TABLE IF NOT EXISTS #$tableName()""") }
   }
 
   override def teardown(): IO[Unit] = IO.fromFuture {
@@ -83,13 +65,13 @@ class MenuViewDao extends Db with LazyLogging {
     IO { db.run(menuViewTable.result) }
   }
 
-  def delete(uuid: UUID): IO[Unit] = IO.fromFuture {
+  def delete(uuid: UUID): IO[Int] = IO.fromFuture {
     IO {
       db.run {
         menuViewTable
           .filter(menuView => menuView.uuid === uuid)
           .delete
-      }.map(_ => ())
+      }
     }
   }
 }

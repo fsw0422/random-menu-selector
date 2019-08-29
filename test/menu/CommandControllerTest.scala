@@ -17,7 +17,7 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
-import user.{UserView, UserViewDao}
+import user.{User, UserViewDao}
 import utils.{Email, EmailSender}
 
 @RunWith(classOf[JUnitRunner])
@@ -116,7 +116,7 @@ class CommandControllerTest extends FlatSpec
 
     And("a default user James")
     val userUuid = UUID.fromString("124e4567-e89b-12d3-a456-426655440000")
-    val userView = UserView(Some(userUuid), "james", "james@email.com")
+    val userView = User(Some(userUuid), "james", "james@email.com")
     userViewDao.upsert(userView).unsafeRunSync()
 
     // external service contract mock

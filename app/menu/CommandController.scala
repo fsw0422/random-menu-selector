@@ -17,8 +17,8 @@ class CommandController @Inject()(aggregate: Aggregate)
       aggregate.createOrUpdateMenu(request.body).map {
         case Left(errorMessage: String) =>
           Ok(Json.obj("result" -> Json.toJson(errorMessage)))
-        case Right(uuidOpt: Option[UUID]) =>
-          Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
+        case Right(res: Int) =>
+          Ok(Json.obj("result" -> Json.toJson(res)))
       }.unsafeToFuture()
     }
   }
@@ -28,8 +28,8 @@ class CommandController @Inject()(aggregate: Aggregate)
       aggregate.deleteMenu(request.body).map {
         case Left(errorMessage: String) =>
           Ok(Json.obj("result" -> Json.toJson(errorMessage)))
-        case Right(uuidOpt: Option[UUID]) =>
-          Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
+        case Right(res: Int) =>
+          Ok(Json.obj("result" -> Json.toJson(res)))
       }.unsafeToFuture()
     }
   }
@@ -39,8 +39,8 @@ class CommandController @Inject()(aggregate: Aggregate)
       aggregate.selectRandomMenu().map {
         case Left(errorMessage: String) =>
           Ok(Json.obj("result" -> Json.toJson(errorMessage)))
-        case Right(uuidOpt: Option[UUID]) =>
-          Ok(Json.obj("result" -> Json.toJson(uuidOpt)))
+        case Right(res: Int) =>
+          Ok(Json.obj("result" -> Json.toJson(res)))
       }.unsafeToFuture()
     }
   }

@@ -5,63 +5,40 @@ import java.util.UUID
 import cats.effect.IO
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Singleton
-import play.api.libs.json.Json
 import utils.db.Db
-
-final case class UserView(
-  uuid: Option[UUID] = Some(UUID.randomUUID()),
-  name: String,
-  email: String
-)
-
-object UserView {
-
-  implicit val jsonFormat = Json
-    .using[Json.WithDefaultValues]
-    .format[UserView]
-
-  val tableName = "user_view"
-  val uuidColumn = "uuid"
-  val nameColumn = "name"
-  val emailColumn = "email"
-}
 
 @Singleton
 class UserViewDao extends Db with LazyLogging {
 
   import utils.db.PostgresProfile.api._
 
+  val tableName = "user_view"
+
   class UserViewTable(tag: Tag)
-      extends Table[UserView](tag, UserView.tableName) {
-    def uuid = column[UUID](UserView.uuidColumn, O.PrimaryKey)
-    def name = column[String](UserView.nameColumn)
-    def email = column[String](UserView.emailColumn)
+    extends Table[User](tag, tableName) {
+    def uuid = column[UUID]("uuid", O.PrimaryKey)
+    def name = column[String]("name")
+    def email = column[String]("email")
 
     def * =
-      (uuid.?, name, email) <> ((UserView.apply _).tupled, UserView.unapply)
+      (uuid.?, name, email) <> ((User.apply _).tupled, User.unapply)
   }
 
   private val userViewTable = TableQuery[UserViewTable]
 
-  override def setup(): IO[Unit] = IO.fromFuture {
-    IO {
-      db.run(sqlu"""CREATE TABLE IF NOT EXISTS #${UserView.tableName}()""")
-        .map(_ => ())
-    }
+  override def setup(): IO[Int] = IO.fromFuture {
+    IO { db.run(sqlu"""CREATE TABLE IF NOT EXISTS #$tableName()""") }
   }
 
   override def teardown(): IO[Unit] = IO.fromFuture {
     IO { db.run(userViewTable.schema.drop) }
   }
 
-  def upsert(userView: UserView): IO[Unit] = IO.fromFuture {
-    IO{
-      db.run(userViewTable.insertOrUpdate(userView))
-        .map(_ => ())
-    }
+  def upsert(userView: User): IO[Int] = IO.fromFuture {
+    IO { db.run(userViewTable.insertOrUpdate(userView)) }
   }
 
-  def findByEmail(email: String): IO[Seq[UserView]] = IO.fromFuture {
+  def findByEmail(email: String): IO[Seq[User]] = IO.fromFuture {
     IO {
       db.run {
         userViewTable
@@ -71,17 +48,17 @@ class UserViewDao extends Db with LazyLogging {
     }
   }
 
-  def findAll(): IO[Seq[UserView]] = IO.fromFuture {
+  def findAll(): IO[Seq[User]] = IO.fromFuture {
     IO { db.run(userViewTable.result) }
   }
 
-  def delete(uuid: UUID): IO[Unit] = IO.fromFuture {
+  def delete(uuid: UUID): IO[Int] = IO.fromFuture {
     IO {
       db.run {
         userViewTable
           .filter(menuView => menuView.uuid === uuid)
           .delete
-      }.map(_ => ())
+      }
     }
   }
 }
