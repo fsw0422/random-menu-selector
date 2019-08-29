@@ -33,7 +33,7 @@ class CommandController @Inject()(aggregate: Aggregate)
 
   def selectRandomMenu(): Action[JsValue] = {
     Action.async(parse.json) { implicit request =>
-      aggregate.selectMenuRandom().map {
+      aggregate.selectRandomMenu().map {
         case Left(errorMessage: String) =>
           Ok(Json.obj("result" -> Json.toJson(errorMessage)))
         case Right(response: String) =>

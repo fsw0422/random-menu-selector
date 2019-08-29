@@ -93,7 +93,7 @@ class Aggregate @Inject()(
    *       This means that shuffling should be delegated to caller
    *       Aggregate should not refer to previous state by querying a view
    */
-  def selectMenuRandom(): IO[Either[String, String]] = {
+  def selectRandomMenu(): IO[Either[String, String]] = {
     val result = for {
       menus <- OptionT.liftF(menuViewDao.findAll())
       selectedMenu <- OptionT.fromOption[IO](Random.shuffle(menus).headOption)
