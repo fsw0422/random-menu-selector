@@ -58,7 +58,7 @@ class EventDao extends Db with LazyLogging {
   }
 
   def insert(event: Event): IO[Int] = IO.fromFuture {
-    IO { db.run(eventTable += event)}
+    IO { db.run(eventTable += event) }
   }
 
   def findByTimeStamp(startTime: DateTime): IO[Seq[Event]] = IO.fromFuture {
