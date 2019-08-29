@@ -99,7 +99,7 @@ class Aggregate @Inject()(
       selectedMenu <- OptionT.fromOption[IO](Random.shuffle(menus).headOption)
 
       updatedSelectedMenu = incrementSelectedCount(selectedMenu)
-      res <- OptionT.liftF {
+      response <- OptionT.liftF {
         val event = Event(
           `type` = EventType.MENU_SELECTED,
           data = Some(Json.toJson(updatedSelectedMenu))
@@ -110,7 +110,7 @@ class Aggregate @Inject()(
       userViews <- OptionT.liftF(userViewDao.findAll())
       _ <- OptionT.liftF(sendMenusToAllUsers(updatedSelectedMenu, userViews))
     } yield {
-      res match {
+      response match {
         case 1 => Right(ResponseMessage.SUCCESS)
         case _ => Left(ResponseMessage.FAILED)
       }
