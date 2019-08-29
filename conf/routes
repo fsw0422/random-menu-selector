@@ -3,15 +3,11 @@ POST     /menu                       menu.CommandController.createOrUpdateMenu()
 DELETE   /menu                       menu.CommandController.deleteMenu()
 POST     /menu/random                menu.CommandController.selectRandomMenu()
 
-POST     /menu/view                  menu.CommandController.createOrUpdateMenuViewSchema()
-
 GET      /menu/view                  menu.QueryController.getMenusByNameLike(name: String)
 
 # User
 POST     /user                       user.CommandController.createOrUpdateUser()
 DELETE   /user                       user.CommandController.deleteUser()
-
-POST     /user/view                  user.CommandController.createOrUpdateUserViewSchema()
 
 GET      /user/view                  user.QueryController.getAllUsers()
 

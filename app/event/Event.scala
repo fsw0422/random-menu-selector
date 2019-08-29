@@ -2,24 +2,21 @@ package event
 
 import java.util.UUID
 
-import akka.actor.ActorSystem
-import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
 import cats.effect.IO
 import com.typesafe.scalalogging.LazyLogging
 import event.EventType.EventType
-import javax.inject.{Inject, Singleton}
-import menu.{MenuView, MenuViewService}
+import javax.inject.Singleton
 import org.joda.time.DateTime
 import play.api.libs.json.JsValue
-import user.{UserView, UserViewService}
-import utils.db.{Db, ViewDatabase}
+import utils.db.Db
 
 object EventType extends Enumeration {
   type EventType = Value
-  val UNKNOWN, RANDOM_MENU_ASKED, MENU_PROFILE_CREATED_OR_UPDATED,
-  MENU_PROFILE_DELETED, MENU_SCHEMA_EVOLVED, USER_PROFILE_CREATED_OR_UPDATED,
-  USER_PROFILE_DELETED, USER_SCHEMA_EVOLVED = Value
+
+  val
+  MENU_SELECTED, MENU_CREATED_OR_UPDATED, MENU_PROFILE_DELETED,
+  USER_CREATED_OR_UPDATED, USER_PROFILE_DELETED,
+  UNKNOWN = Value
 }
 
 final case class Event(
@@ -28,90 +25,6 @@ final case class Event(
   `type`: EventType = EventType.UNKNOWN,
   data: Option[JsValue] = None
 )
-
-@Singleton
-class EventService @Inject()(
-  eventDao: EventDao,
-  viewDatabase: ViewDatabase,
-  menuViewService: MenuViewService,
-  userViewService: UserViewService
-) extends LazyLogging {
-
-  private implicit val actorSystem = ActorSystem("Event")
-  private implicit val executionContext = actorSystem.dispatcher
-  private implicit val actorMaterializerSettings = ActorMaterializerSettings(actorSystem)
-  private implicit val actorMaterializer = ActorMaterializer(actorMaterializerSettings)
-
-  val menuEventBus = eventStream(5) { event =>
-    event.`type` match {
-      case EventType.RANDOM_MENU_ASKED |
-           EventType.MENU_PROFILE_CREATED_OR_UPDATED |
-           EventType.MENU_PROFILE_DELETED |
-           EventType.MENU_SCHEMA_EVOLVED =>
-        eventDao.insert(event)
-      case _ =>
-        logger.error(s"No such event type [${event.`type`}]")
-    }
-    event
-  } { event =>
-    event.`type` match {
-      case EventType.RANDOM_MENU_ASKED |
-           EventType.MENU_PROFILE_CREATED_OR_UPDATED =>
-        event.data.fold(logger.warn(s"[$event] is None")) { menuViewJson =>
-          menuViewService.upsert(menuViewJson.as[MenuView])
-        }
-      case EventType.MENU_PROFILE_DELETED =>
-        event.data.fold(logger.warn(s"[$event] is None")) { menuUuidJson =>
-          menuViewService.delete(menuUuidJson.as[UUID])
-        }
-      case EventType.MENU_SCHEMA_EVOLVED =>
-        viewDatabase.viewVersionNonExistAction(event) { targetVersion =>
-          menuViewService.evolve(targetVersion)
-        }
-      case _ =>
-        logger.error(s"No such event type [${event.`type`}]")
-    }
-  }
-
-  val userEventBus = eventStream(5) { event =>
-    event.`type` match {
-      case EventType.USER_PROFILE_CREATED_OR_UPDATED |
-           EventType.USER_PROFILE_DELETED |
-           EventType.USER_SCHEMA_EVOLVED =>
-        eventDao.insert(event)
-      case _ =>
-        logger.error(s"No such event type [${event.`type`}]")
-    }
-    event
-  } { event =>
-    event.`type` match {
-      case EventType.USER_PROFILE_CREATED_OR_UPDATED =>
-        event.data.fold(logger.warn(s"[$event] is None")) { menuViewJson =>
-          userViewService.upsert(menuViewJson.as[UserView])
-        }
-      case EventType.USER_PROFILE_DELETED =>
-        event.data.fold(logger.warn(s"[$event] is None")) { menuUuidJson =>
-          menuViewService.delete(menuUuidJson.as[UUID])
-        }
-      case EventType.USER_SCHEMA_EVOLVED =>
-        viewDatabase.viewVersionNonExistAction(event) { targetVersion =>
-          userViewService.evolve(targetVersion)
-        }
-      case _ =>
-        logger.error(s"No such event type [${event.`type`}]")
-    }
-  }
-
-  private def eventStream(bufferSize: Int)
-    (flowHandler: Event => Event)
-    (sinkHandler: Event => Any): SourceQueueWithComplete[Event] = {
-    Source
-      .queue[Event](bufferSize, OverflowStrategy.backpressure)
-      .via(Flow[Event].map(event => flowHandler.apply(event)))
-      .to(Sink.foreach[Event](event => sinkHandler.apply(event)))
-      .run()
-  }
-}
 
 @Singleton
 class EventDao extends Db with LazyLogging {
@@ -137,15 +50,15 @@ class EventDao extends Db with LazyLogging {
   private val eventTable = TableQuery[EventTable]
 
   override def setup(): IO[Unit] = IO.fromFuture {
-    IO(db.run(eventTable.schema.create))
+    IO { db.run(eventTable.schema.create) }
   }
 
   override def teardown(): IO[Unit] = IO.fromFuture {
-    IO(db.run(eventTable.schema.drop))
+    IO { db.run(eventTable.schema.drop) }
   }
 
   def insert(event: Event): IO[Int] = IO.fromFuture {
-    IO(db.run(eventTable += event))
+    IO { db.run(eventTable += event) }
   }
 
   def findByTimeStamp(startTime: DateTime): IO[Seq[Event]] = IO.fromFuture {

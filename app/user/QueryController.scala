@@ -7,13 +7,13 @@ import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponent
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class QueryController @Inject()(userViewService: UserViewService)
+class QueryController @Inject()(userViewDao: UserViewDao)
   (implicit controllerComponents: ControllerComponents)
   extends AbstractController(controllerComponents) {
 
   def getAllUsers(): Action[AnyContent] = {
     Action.async { implicit request =>
-      userViewService.findAll().map { userViews =>
+      userViewDao.findAll().map { userViews =>
         Ok(Json.obj("result" -> Json.toJson(userViews)))
       }.unsafeToFuture()
     }

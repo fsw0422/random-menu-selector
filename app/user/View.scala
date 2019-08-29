@@ -4,88 +4,41 @@ import java.util.UUID
 
 import cats.effect.IO
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.{Inject, Singleton}
-import play.api.libs.json.Json
+import javax.inject.Singleton
 import utils.db.Db
-
-final case class UserView(
-  uuid: Option[UUID] = Some(UUID.randomUUID()),
-  name: String,
-  email: String
-)
-
-object UserView {
-
-  implicit val jsonFormat = Json
-    .using[Json.WithDefaultValues]
-    .format[UserView]
-
-  val tableName = "user_view"
-  val uuidColumn = "uuid"
-  val nameColumn = "name"
-  val emailColumn = "email"
-}
-
-@Singleton
-class UserViewService @Inject()(userViewDao: UserViewDao) {
-
-  def upsert(userView: UserView): IO[Unit] = {
-    userViewDao.upsert(userView)
-  }
-
-  def findByEmail(email: String): IO[Seq[UserView]] = {
-    userViewDao.findByEmail(email)
-  }
-
-  def findAll(): IO[Seq[UserView]] = {
-    userViewDao.findAll()
-  }
-
-  def delete(uuid: UUID): IO[Unit] = {
-    userViewDao.delete(uuid)
-  }
-
-  def evolve(targetVersion: String): IO[Unit] = {
-    userViewDao.evolve(targetVersion)
-  }
-}
 
 @Singleton
 class UserViewDao extends Db with LazyLogging {
 
   import utils.db.PostgresProfile.api._
 
+  val tableName = "user_view"
+
   class UserViewTable(tag: Tag)
-      extends Table[UserView](tag, UserView.tableName) {
-    def uuid = column[UUID](UserView.uuidColumn, O.PrimaryKey)
-    def name = column[String](UserView.nameColumn)
-    def email = column[String](UserView.emailColumn)
+    extends Table[User](tag, tableName) {
+    def uuid = column[UUID]("uuid", O.PrimaryKey)
+    def name = column[String]("name")
+    def email = column[String]("email")
 
     def * =
-      (uuid.?, name, email) <> ((UserView.apply _).tupled, UserView.unapply)
+      (uuid.?, name, email) <> ((User.apply _).tupled, User.unapply)
   }
 
   private val userViewTable = TableQuery[UserViewTable]
 
   override def setup(): IO[Unit] = IO.fromFuture {
-    IO {
-      db.run(sqlu"""CREATE TABLE IF NOT EXISTS #${UserView.tableName}()""")
-        .map(_ => ())
-    }
+    IO { db.run(userViewTable.schema.create) }
   }
 
   override def teardown(): IO[Unit] = IO.fromFuture {
-    IO(db.run(userViewTable.schema.drop))
+    IO { db.run(userViewTable.schema.drop) }
   }
 
-  def upsert(userView: UserView): IO[Unit] = IO.fromFuture {
-    IO{
-      db.run(userViewTable.insertOrUpdate(userView))
-        .map(_ => ())
-    }
+  def upsert(userView: User): IO[Int] = IO.fromFuture {
+    IO { db.run(userViewTable.insertOrUpdate(userView)) }
   }
 
-  def findByEmail(email: String): IO[Seq[UserView]] = IO.fromFuture {
+  def findByEmail(email: String): IO[Seq[User]] = IO.fromFuture {
     IO {
       db.run {
         userViewTable
@@ -95,43 +48,16 @@ class UserViewDao extends Db with LazyLogging {
     }
   }
 
-  def findAll(): IO[Seq[UserView]] = IO.fromFuture {
-    IO(db.run(userViewTable.result))
+  def findAll(): IO[Seq[User]] = IO.fromFuture {
+    IO { db.run(userViewTable.result) }
   }
 
-  def delete(uuid: UUID): IO[Unit] = IO.fromFuture {
+  def delete(uuid: UUID): IO[Int] = IO.fromFuture {
     IO {
       db.run {
         userViewTable
           .filter(menuView => menuView.uuid === uuid)
           .delete
-      }.map(_ => ())
-    }
-  }
-
-  def evolve(targetVersion: String): IO[Unit] = IO.fromFuture {
-    IO {
-      targetVersion match {
-        case "1.0" =>
-          db.run(
-            DBIO.seq(
-              sqlu"""CREATE EXTENSION IF NOT EXISTS "pgcrypto"""",
-              sqlu"""ALTER TABLE #${UserView.tableName} ADD COLUMN #${UserView.uuidColumn} UUID PRIMARY KEY DEFAULT gen_random_uuid()""",
-              sqlu"""ALTER TABLE #${UserView.tableName} ADD COLUMN #${UserView.nameColumn} TEXT DEFAULT '' NOT NULL""",
-              sqlu"""ALTER TABLE #${UserView.tableName} ADD COLUMN #${UserView.emailColumn} TEXT UNIQUE DEFAULT '' NOT NULL"""
-            )
-          )
-        case "2.0" =>
-          db.run(
-            DBIO.seq(
-              sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.uuidColumn} DROP DEFAULT""",
-              sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.nameColumn} DROP DEFAULT""",
-              sqlu"""ALTER TABLE #${UserView.tableName} ALTER COLUMN #${UserView.emailColumn} DROP DEFAULT"""
-            )
-          )
-        case "3.0" =>
-          db.run(sqlu"""DROP EXTENSION IF EXISTS "pgcrypto"""")
-            .map(_ => ())
       }
     }
   }
