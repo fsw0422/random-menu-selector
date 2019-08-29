@@ -26,8 +26,8 @@ class UserViewDao extends Db with LazyLogging {
 
   private val userViewTable = TableQuery[UserViewTable]
 
-  override def setup(): IO[Int] = IO.fromFuture {
-    IO { db.run(sqlu"""CREATE TABLE IF NOT EXISTS #$tableName()""") }
+  override def setup(): IO[Unit] = IO.fromFuture {
+    IO { db.run(userViewTable.schema.create) }
   }
 
   override def teardown(): IO[Unit] = IO.fromFuture {

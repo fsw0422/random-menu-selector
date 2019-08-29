@@ -29,8 +29,8 @@ class MenuViewDao extends Db with LazyLogging {
 
   private val menuViewTable = TableQuery[MenuViewTable]
 
-  override def setup(): IO[Int] = IO.fromFuture {
-    IO { db.run(sqlu"""CREATE TABLE IF NOT EXISTS #$tableName()""") }
+  override def setup(): IO[Unit] = IO.fromFuture {
+    IO { db.run(menuViewTable.schema.create) }
   }
 
   override def teardown(): IO[Unit] = IO.fromFuture {

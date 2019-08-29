@@ -1,8 +1,5 @@
 package menu
 
-import java.util.UUID
-
-import akka.stream.QueueOfferResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{AbstractController, Action, ControllerComponents}
@@ -17,8 +14,8 @@ class CommandController @Inject()(aggregate: Aggregate)
       aggregate.createOrUpdateMenu(request.body).map {
         case Left(errorMessage: String) =>
           Ok(Json.obj("result" -> Json.toJson(errorMessage)))
-        case Right(res: Int) =>
-          Ok(Json.obj("result" -> Json.toJson(res)))
+        case Right(response: String) =>
+          Ok(Json.obj("result" -> Json.toJson(response)))
       }.unsafeToFuture()
     }
   }
@@ -28,19 +25,19 @@ class CommandController @Inject()(aggregate: Aggregate)
       aggregate.deleteMenu(request.body).map {
         case Left(errorMessage: String) =>
           Ok(Json.obj("result" -> Json.toJson(errorMessage)))
-        case Right(res: Int) =>
-          Ok(Json.obj("result" -> Json.toJson(res)))
+        case Right(response: String) =>
+          Ok(Json.obj("result" -> Json.toJson(response)))
       }.unsafeToFuture()
     }
   }
 
   def selectRandomMenu(): Action[JsValue] = {
     Action.async(parse.json) { implicit request =>
-      aggregate.selectRandomMenu().map {
+      aggregate.selectMenuRandom().map {
         case Left(errorMessage: String) =>
           Ok(Json.obj("result" -> Json.toJson(errorMessage)))
-        case Right(res: Int) =>
-          Ok(Json.obj("result" -> Json.toJson(res)))
+        case Right(response: String) =>
+          Ok(Json.obj("result" -> Json.toJson(response)))
       }.unsafeToFuture()
     }
   }

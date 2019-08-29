@@ -11,7 +11,7 @@ import com.typesafe.config.Config
 import event.{Event, EventDao, EventType}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json}
-import utils.ErrorResponseMessage
+import utils.ResponseMessage
 
 final case class User(
   uuid: Option[UUID] = Some(UUID.randomUUID()),
@@ -36,45 +36,50 @@ class Aggregate @Inject()(
 
   private val writePassword = config.getString("write.password")
 
-  def createOrUpdateUser(user: JsValue): IO[Either[String, Int]] = {
-    auth.authenticate(user, writePassword)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+  def createOrUpdateUser(user: JsValue): IO[Either[String, String]] = {
+    auth.authenticate(user, writePassword)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) {
       val result = for {
-        res <- OptionT.liftF {
+        response <- OptionT.liftF {
           val event = Event(
-            `type` = EventType.USER_PROFILE_CREATED_OR_UPDATED,
+            `type` = EventType.USER_CREATED_OR_UPDATED,
             data = Some(user),
           )
           eventDao.insert(event)
         }
-        // TODO: from here should be updated by an event as separate module
-        newUser <- OptionT.fromOption[IO](user.asOpt[User])
-        users <- OptionT.liftF(userViewDao.findByEmail(newUser.email))
-        updatedUser = users.headOption.fold(newUser)(oldUser => update(oldUser, newUser))
-        _ <- OptionT.liftF(userViewDao.upsert(updatedUser))
-      } yield Right(res)
-      result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
+        user <- OptionT.fromOption[IO](user.asOpt[User])
+        _ <- OptionT.liftF(userViewDao.upsert(user))
+      } yield {
+        response match {
+          case 1 => Right(ResponseMessage.SUCCESS)
+          case _ => Left(ResponseMessage.FAILED)
+        }
+      }
+      result.value.map(_.getOrElse(Left(ResponseMessage.NO_SUCH_IDENTITY)))
     }
   }
 
-  def deleteUser(userUuid: JsValue): IO[Either[String, Int]] = {
-    auth.authenticate(userUuid, writePassword)(IO.pure(Left(ErrorResponseMessage.UNAUTHORIZED))) {
+  def deleteUser(userUuid: JsValue): IO[Either[String, String]] = {
+    auth.authenticate(userUuid, writePassword)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) {
       val result = for {
-        res <- OptionT.liftF {
+        response <- OptionT.liftF {
           val event = Event(
             `type` = EventType.USER_PROFILE_DELETED,
             data = Some(userUuid),
           )
           eventDao.insert(event)
         }
-        // TODO: from here should be updated by an event as separate module
         targetUserUuid <- OptionT.fromOption[IO]((userUuid \ "uuid").asOpt[String].map(UUID.fromString))
         _ <- OptionT.liftF(userViewDao.delete(targetUserUuid))
-      } yield Right(res)
-      result.value.map(_.getOrElse(Left(ErrorResponseMessage.NO_SUCH_IDENTITY)))
+      } yield {
+        response match {
+          case 1 => Right(ResponseMessage.SUCCESS)
+          case _ => Left(ResponseMessage.FAILED)
+        }
+      }
+      result.value.map(_.getOrElse(Left(ResponseMessage.NO_SUCH_IDENTITY)))
     }
   }
 
-  //TODO: try to find a way to compose rather than running
   private def update(initialUserView: User, userView: User): User = {
     val updatedState = State[User, Unit] { oldUserView =>
       val newUserView = oldUserView.copy(

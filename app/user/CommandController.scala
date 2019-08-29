@@ -14,8 +14,8 @@ class CommandController @Inject()(aggregate: Aggregate)
       aggregate.createOrUpdateUser(request.body).map {
         case Left(errorMessage: String) =>
           Ok(Json.obj("result" -> Json.toJson(errorMessage)))
-        case Right(res: Int) =>
-          Ok(Json.obj("result" -> Json.toJson(res)))
+        case Right(response: String) =>
+          Ok(Json.obj("result" -> Json.toJson(response)))
       }.unsafeToFuture()
     }
   }
@@ -25,8 +25,8 @@ class CommandController @Inject()(aggregate: Aggregate)
       aggregate.deleteUser(request.body).map {
         case Left(errorMessage: String) =>
           Ok(Json.obj("result" -> Json.toJson(errorMessage)))
-        case Right(res: Int) =>
-          Ok(Json.obj("result" -> Json.toJson(res)))
+        case Right(response: String) =>
+          Ok(Json.obj("result" -> Json.toJson(response)))
       }.unsafeToFuture()
     }
   }

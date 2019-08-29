@@ -18,7 +18,7 @@ import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import user.{User, UserViewDao}
-import utils.{Email, EmailSender}
+import utils.{Email, EmailSender, ResponseMessage}
 
 @RunWith(classOf[JUnitRunner])
 class CommandControllerTest extends FlatSpec
@@ -51,7 +51,6 @@ class CommandControllerTest extends FlatSpec
   )
 
   override def afterStart: Unit = {
-    // override environmental variables with randomized infrastructural host / port
     sys.props += (
       "POSTGRES_HOST" -> container.containerIpAddress,
       "POSTGRES_PORT" -> container.mappedPort(POSTGRES_EXPOSED_PORT).toString
@@ -60,28 +59,20 @@ class CommandControllerTest extends FlatSpec
     mockedApp = GuiceApplicationBuilder()
       .bindings(bind[EmailSender].toInstance(emailSenderMock))
       .build
+
     eventDao = mockedApp.injector.instanceOf(classOf[EventDao])
     menuViewDao = mockedApp.injector.instanceOf(classOf[MenuViewDao])
     userViewDao = mockedApp.injector.instanceOf(classOf[UserViewDao])
   }
 
   override def beforeStop: Unit = {
-    // stop app first since it may fail the test if it encounters error from lost connections to infrastructures
     mockedApp.stop()
   }
 
   before {
     eventDao.setup().unsafeRunSync()
-
     menuViewDao.setup().unsafeRunSync()
-    menuViewDao.evolve("1.0").unsafeRunSync()
-    menuViewDao.evolve("2.0").unsafeRunSync()
-    menuViewDao.evolve("3.0").unsafeRunSync()
-
     userViewDao.setup().unsafeRunSync()
-    userViewDao.evolve("1.0").unsafeRunSync()
-    userViewDao.evolve("2.0").unsafeRunSync()
-    userViewDao.evolve("3.0").unsafeRunSync()
   }
 
   after {
@@ -90,10 +81,14 @@ class CommandControllerTest extends FlatSpec
     userViewDao.teardown().unsafeRunSync()
   }
 
+  behavior of "POST request to /menu endpoint"
+
+  it should "return ok status" in {
+  }
+
   behavior of "POST request to /menu/random endpoint"
 
-  it should "return ok status with random menu's UUID" in {
-    // service-owned infrastructure setup
+  it should "return ok status with updated " in {
     Given("an apple pie and pear pie")
     val applePieUuid = UUID.fromString("123e4567-e89b-12d3-a456-426655440000")
     val applePieView = Menu(
@@ -137,8 +132,8 @@ class CommandControllerTest extends FlatSpec
 
     And("return either apple pie or pear pie")
     val responseContent = contentAsJson(response)
-    val uuid = (responseContent \ "result").as[String]
-    uuid should (equal("123e4567-e89b-12d3-a456-426655440000") or equal("223e4567-e89b-12d3-a456-426655440000"))
+    val result = (responseContent \ "result").as[String]
+    result should equal(ResponseMessage.SUCCESS)
 
     And("menus are sent by email to all users")
     verify(emailSenderMock, times(1))
