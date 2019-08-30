@@ -8,7 +8,7 @@ import cats.effect.IO
 import com.typesafe.config.Config
 import event.{Event, EventDao, EventType}
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import user.{User, UserViewDao}
 import utils.{Email, EmailProperty, EmailSender, ResponseMessage}
 
@@ -44,17 +44,18 @@ class Aggregate @Inject()(
   private val emailUser = config.getString("email.user")
   private val emailPassword = config.getString("email.password")
 
-  def createOrUpdateMenu(menu: JsValue): IO[Either[String, String]] = {
-    auth.authenticate(menu, writePassword)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) {
+  def createOrUpdateMenu(body: JsValue): IO[Either[String, String]] = {
+    auth.authenticate(body, writePassword)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) {
+      val menuJson = Json.toJson(body.as[JsObject] - "password")
       val result = for {
         response <- OptionT.liftF {
           val event = Event(
             `type` = EventType.MENU_CREATED_OR_UPDATED,
-            data = Some(menu),
+            data = Some(menuJson),
           )
           eventDao.insert(event)
         }
-        menu <- OptionT.fromOption[IO](menu.asOpt[Menu])
+        menu <- OptionT.fromOption[IO](menuJson.asOpt[Menu])
         _ <- OptionT.liftF(menuViewDao.upsert(menu))
       } yield  {
         response match {
@@ -66,17 +67,18 @@ class Aggregate @Inject()(
     }
   }
 
-  def deleteMenu(menuUuid: JsValue): IO[Either[String, String]] = {
-    auth.authenticate(menuUuid, writePassword)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) {
+  def deleteMenu(body: JsValue): IO[Either[String, String]] = {
+    auth.authenticate(body, writePassword)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) {
+      val targetMenuUuidJson = Json.toJson(body.as[JsObject] - "password")
       val result = for {
         response <- OptionT.liftF {
           val event = Event(
-            `type` = EventType.MENU_PROFILE_DELETED,
-            data = Some(menuUuid),
+            `type` = EventType.MENU_DELETED,
+            data = Some(body),
           )
           eventDao.insert(event)
         }
-        targetMenuUuid <- OptionT.fromOption[IO]((menuUuid \ "uuid").asOpt[String].map(UUID.fromString))
+        targetMenuUuid <- OptionT.fromOption[IO]((targetMenuUuidJson \ "uuid").asOpt[String].map(UUID.fromString))
         _ <- OptionT.liftF(menuViewDao.delete(targetMenuUuid))
       } yield {
         response match {

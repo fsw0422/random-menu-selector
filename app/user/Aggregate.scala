@@ -10,7 +10,7 @@ import cats.effect.IO
 import com.typesafe.config.Config
 import event.{Event, EventDao, EventType}
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import utils.ResponseMessage
 
 final case class User(
@@ -36,17 +36,18 @@ class Aggregate @Inject()(
 
   private val writePassword = config.getString("write.password")
 
-  def createOrUpdateUser(user: JsValue): IO[Either[String, String]] = {
-    auth.authenticate(user, writePassword)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) {
+  def createOrUpdateUser(body: JsValue): IO[Either[String, String]] = {
+    auth.authenticate(body, writePassword)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) {
+      val userJson = Json.toJson(body.as[JsObject] - "password")
       val result = for {
         response <- OptionT.liftF {
           val event = Event(
             `type` = EventType.USER_CREATED_OR_UPDATED,
-            data = Some(user),
+            data = Some(userJson)
           )
           eventDao.insert(event)
         }
-        user <- OptionT.fromOption[IO](user.asOpt[User])
+        user <- OptionT.fromOption[IO](userJson.asOpt[User])
         _ <- OptionT.liftF(userViewDao.upsert(user))
       } yield {
         response match {
@@ -58,17 +59,18 @@ class Aggregate @Inject()(
     }
   }
 
-  def deleteUser(userUuid: JsValue): IO[Either[String, String]] = {
-    auth.authenticate(userUuid, writePassword)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) {
+  def deleteUser(body: JsValue): IO[Either[String, String]] = {
+    auth.authenticate(body, writePassword)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) {
+      val targetUserUuidJson = Json.toJson(body.as[JsObject] - "password")
       val result = for {
         response <- OptionT.liftF {
           val event = Event(
-            `type` = EventType.USER_PROFILE_DELETED,
-            data = Some(userUuid),
+            `type` = EventType.USER_DELETED,
+            data = Some(targetUserUuidJson)
           )
           eventDao.insert(event)
         }
-        targetUserUuid <- OptionT.fromOption[IO]((userUuid \ "uuid").asOpt[String].map(UUID.fromString))
+        targetUserUuid <- OptionT.fromOption[IO]((targetUserUuidJson \ "uuid").asOpt[String].map(UUID.fromString))
         _ <- OptionT.liftF(userViewDao.delete(targetUserUuid))
       } yield {
         response match {
