@@ -74,7 +74,7 @@ class Aggregate @Inject()(
         response <- OptionT.liftF {
           val event = Event(
             `type` = EventType.MENU_DELETED,
-            data = Some(body),
+            data = Some(targetMenuUuidJson),
           )
           eventDao.insert(event)
         }
