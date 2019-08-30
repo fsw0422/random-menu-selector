@@ -2,8 +2,6 @@ package user
 
 import java.util.UUID
 
-import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import auth.Auth
 import cats.data.{OptionT, State}
 import cats.effect.IO
@@ -34,11 +32,8 @@ class Aggregate @Inject()(
   userViewDao: UserViewDao
 ) {
 
-  private val writePassword = config.getString("write.password")
-
   def createOrUpdateUser(body: JsValue): IO[Either[String, String]] = {
-    auth.authenticate(body, writePassword)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) {
-      val userJson = Json.toJson(body.as[JsObject] - "password")
+    auth.authenticate(body)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) { userJson =>
       val result = for {
         response <- OptionT.liftF {
           val event = Event(
@@ -60,8 +55,7 @@ class Aggregate @Inject()(
   }
 
   def deleteUser(body: JsValue): IO[Either[String, String]] = {
-    auth.authenticate(body, writePassword)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) {
-      val targetUserUuidJson = Json.toJson(body.as[JsObject] - "password")
+    auth.authenticate(body)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) { targetUserUuidJson =>
       val result = for {
         response <- OptionT.liftF {
           val event = Event(

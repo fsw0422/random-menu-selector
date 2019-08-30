@@ -1,19 +1,22 @@
 package auth
 
 import cats.effect.IO
-import javax.inject.Singleton
-import play.api.libs.json.JsValue
+import com.typesafe.config.Config
+import javax.inject.{Inject, Singleton}
+import play.api.libs.json.{JsObject, JsValue, Json}
 
 @Singleton
-class Auth {
+class Auth @Inject()(config: Config) {
 
-  def authenticate[R](requestBody: JsValue, password: String)
+  private val writePassword = config.getString("write.password")
+
+  def authenticate[R](body: JsValue, password: String = writePassword)
     (accessDenied: => IO[Either[String, R]])
-    (accessGranted: => IO[Either[String, R]]): IO[Either[String, R]] = {
-    val attemptedPasswordOpt = (requestBody \ "password").asOpt[String]
+    (accessGranted: JsValue => IO[Either[String, R]]): IO[Either[String, R]] = {
+    val attemptedPasswordOpt = (body \ "password").asOpt[String]
     attemptedPasswordOpt.fold(accessDenied) { attemptedPassword =>
       if (attemptedPassword == password) {
-        accessGranted
+        accessGranted(Json.toJson(body.as[JsObject] - "password"))
       } else {
         accessDenied
       }

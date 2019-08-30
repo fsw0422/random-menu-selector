@@ -40,13 +40,11 @@ class Aggregate @Inject()(
   userViewDao: UserViewDao
 ) {
 
-  private val writePassword = config.getString("write.password")
   private val emailUser = config.getString("email.user")
   private val emailPassword = config.getString("email.password")
 
   def createOrUpdateMenu(body: JsValue): IO[Either[String, String]] = {
-    auth.authenticate(body, writePassword)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) {
-      val menuJson = Json.toJson(body.as[JsObject] - "password")
+    auth.authenticate(body)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) { menuJson =>
       val result = for {
         response <- OptionT.liftF {
           val event = Event(
@@ -68,8 +66,7 @@ class Aggregate @Inject()(
   }
 
   def deleteMenu(body: JsValue): IO[Either[String, String]] = {
-    auth.authenticate(body, writePassword)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) {
-      val targetMenuUuidJson = Json.toJson(body.as[JsObject] - "password")
+    auth.authenticate(body)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) { targetMenuUuidJson =>
       val result = for {
         response <- OptionT.liftF {
           val event = Event(
