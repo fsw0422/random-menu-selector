@@ -25,10 +25,11 @@ $(function() {
     var link = $("#link").val()
     var password = $("#password").val()
     $.ajax({
-      url: '/menu',
+      url: '/v1/menu',
       type: 'post',
       contentType: 'application/json',
       data: JSON.stringify({
+      	'version': "1.0",
         'name': name,
         'ingredients': ingredients,
         'recipe': recipe,
@@ -57,10 +58,11 @@ $(function() {
     var uuid = $("#uuid").val()
     var password = $("#password").val()
     $.ajax({
-      url: '/menu',
+      url: '/v1/menu',
       type: 'delete',
       contentType: 'application/json',
       data: JSON.stringify({
+      	'version': "1.0",
         'uuid': uuid,
         'password': password
       })
@@ -83,10 +85,10 @@ $(function() {
 
   $('#random').click(function() {
     $.ajax({
-      url: '/menu/random',
+      url: '/v1/menu/random',
       type: 'post',
       contentType: 'application/json',
-      data: JSON.stringify({})
+      data: JSON.stringify({ 'type': "1.0" })
     })
     .done(function(response) {
       var uuid = response.result
@@ -99,7 +101,7 @@ $(function() {
 
   function searchMenu(menuName) {
     $.ajax({
-      url: '/menu/view',
+      url: '/v1/menu/view',
       type: 'get',
       data: {
         name: menuName,

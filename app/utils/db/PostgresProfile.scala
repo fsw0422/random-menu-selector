@@ -1,8 +1,9 @@
 package utils.db
 
 import com.github.tminglei.slickpg._
-import slick.basic.Capability
-import slick.jdbc.JdbcCapabilities
+import play.api.libs.json.{JsValue, Json}
+import slick.basic.{Capability, DatabaseConfig}
+import slick.jdbc.{JdbcCapabilities, JdbcProfile}
 
 trait PostgresProfile
     extends ExPostgresProfile
@@ -37,6 +38,11 @@ trait PostgresProfile
     implicit val stringListTypeMapper =
       new SimpleArrayJdbcType[String]("TEXT")
         .to(_.toSeq)
+    implicit val playJsonArrayTypeMapper =
+      new AdvancedArrayJdbcType[JsValue](pgjson,
+        s => utils.SimpleArrayUtils.fromString[JsValue](Json.parse)(s).orNull,
+        v => utils.SimpleArrayUtils.mkString[JsValue](_.toString())(v)
+      ).to(_.toList)
   }
 }
 

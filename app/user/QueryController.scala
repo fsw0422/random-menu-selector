@@ -4,16 +4,14 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 
-import scala.concurrent.ExecutionContext
-
 @Singleton
-class QueryController @Inject()(userViewDao: UserViewDao)
+class QueryController @Inject()(userViewHandler: UserViewHandler)
   (implicit controllerComponents: ControllerComponents)
   extends AbstractController(controllerComponents) {
 
-  def getAllUsers(): Action[AnyContent] = {
+  def searchAll(): Action[AnyContent] = {
     Action.async { implicit request =>
-      userViewDao.findAll().map { userViews =>
+      userViewHandler.searchAll().map { userViews =>
         Ok(Json.obj("result" -> Json.toJson(userViews)))
       }.unsafeToFuture()
     }

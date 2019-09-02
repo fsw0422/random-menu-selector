@@ -1,17 +1,19 @@
 # Menu
-POST     /menu                       menu.CommandController.createOrUpdateMenu()
-DELETE   /menu                       menu.CommandController.deleteMenu()
-POST     /menu/random                menu.CommandController.selectRandomMenu()
+POST     /v1/menu                       menu.CommandController.register()
+PUT      /v1/menu                       menu.CommandController.edit()
+DELETE   /v1/menu                       menu.CommandController.remove()
+POST     /v1/menu/random                menu.CommandController.selectMenu()
 
-GET      /menu/view                  menu.QueryController.getMenusByNameLike(name: String)
+GET      /v1/menu/view/:name            menu.QueryController.searchByName(name: String)
 
 # User
-POST     /user                       user.CommandController.createOrUpdateUser()
-DELETE   /user                       user.CommandController.deleteUser()
+POST     /v1/user                       user.CommandController.signUp()
+PUT      /v1/user                       user.CommandController.edit()
+DELETE   /v1/user                       user.CommandController.remove()
 
-GET      /user/view                  user.QueryController.getAllUsers()
+GET      /v1/user/view                  user.QueryController.searchAll()
 
 # Webpage
-GET      /                           controllers.RedirectController.index()
-GET      /favicon.ico                controllers.Assets.at(path="/public", file="images/favicon.ico")
-GET      /admin/*file                controllers.Assets.at(path="/public", file)
+GET      /                              controllers.RedirectController.index()
+GET      /favicon.ico                   controllers.Assets.at(path="/public", file="images/favicon.ico")
+GET      /admin/*file                   controllers.Assets.at(path="/public", file)
