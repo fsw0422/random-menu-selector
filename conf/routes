@@ -4,7 +4,7 @@ PUT      /v1/menu                       menu.CommandController.edit()
 DELETE   /v1/menu                       menu.CommandController.remove()
 POST     /v1/menu/random                menu.CommandController.selectMenu()
 
-GET      /v1/menu/view/:name            menu.QueryController.searchByName(name: String)
+GET      /v1/menu/view                  menu.QueryController.searchByName(name: String)
 
 # User
 POST     /v1/user                       user.CommandController.signUp()
