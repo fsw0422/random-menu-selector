@@ -19,38 +19,70 @@ $(function() {
   })
 
   $('#submit').click(function() {
+    var uuid = $("#uuid").val()
     var name = $("#name").val()
     var ingredients = $("#ingredients").val().trim().split(',')
     var recipe = $("#recipe").val()
     var link = $("#link").val()
     var password = $("#password").val()
-    $.ajax({
-      url: '/v1/menu',
-      type: 'post',
-      contentType: 'application/json',
-      data: JSON.stringify({
-        'name': name,
-        'ingredients': ingredients,
-        'recipe': recipe,
-        'link': link,
-        'selectedCount': 0,
-        'password': password
-      })
-    })
-    .done(function(response) {
-      var result = response.result
-      if (result == "ACCESS DENIED") {
-        alert("Your password does not match!")
-      } else {
-        alert("Your Menu has been created (updated) successfully!")
-      }
 
-      var menuTableBody = $('#menu_table > tbody')
-      menuTableBody.empty()
-    })
-    .fail(function(jqXHR, textStatus) {
-      alert("Menu create (update) failed")
-    })
+    if (uuid) {
+			$.ajax({
+				url: '/v1/menu',
+				type: 'post',
+				contentType: 'application/json',
+				data: JSON.stringify({
+					'name': name,
+					'ingredients': ingredients,
+					'recipe': recipe,
+					'link': link,
+					'selectedCount': 0,
+					'passwordAttempt': password
+				})
+			})
+			.done(function(response) {
+				var result = response.result
+				if (result == "ACCESS DENIED") {
+					alert("Your password does not match!")
+				} else {
+					alert("Your Menu has been created (updated) successfully!")
+				}
+
+				var menuTableBody = $('#menu_table > tbody')
+				menuTableBody.empty()
+			})
+			.fail(function(jqXHR, textStatus) {
+				alert("Menu create (update) failed")
+			})
+    } else {
+			$.ajax({
+				url: '/v1/menu',
+				type: 'put',
+				contentType: 'application/json',
+				data: JSON.stringify({
+					'uuid': uuid,
+					'name': name,
+					'ingredients': ingredients,
+					'recipe': recipe,
+					'link': link,
+					'passwordAttempt': password
+				})
+			})
+			.done(function(response) {
+				var result = response.result
+				if (result == "ACCESS DENIED") {
+					alert("Your password does not match!")
+				} else {
+					alert("Your Menu has been created (updated) successfully!")
+				}
+
+				var menuTableBody = $('#menu_table > tbody')
+				menuTableBody.empty()
+			})
+			.fail(function(jqXHR, textStatus) {
+				alert("Menu create (update) failed")
+			})
+    }
   })
 
   $('#delete').click(function() {
@@ -62,7 +94,7 @@ $(function() {
       contentType: 'application/json',
       data: JSON.stringify({
         'uuid': uuid,
-        'password': password
+        'passwordAttempt': password
       })
     })
     .done(function(response) {
@@ -136,5 +168,4 @@ $(function() {
       alert(textStatus)
     })
   }
-
 })
