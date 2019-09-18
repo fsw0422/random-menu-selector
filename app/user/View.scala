@@ -33,7 +33,7 @@ class UserViewHandler @Inject()(userViewDao: UserViewDao) {
         email = user.email.getOrElse(""),
         name = user.name.getOrElse("")
       )
-      IO.fromFuture(IO(userViewDao.insert(newMenuView)))
+      IO.fromFuture(IO(userViewDao.upsert(newMenuView)))
     }
   }
 
@@ -46,7 +46,7 @@ class UserViewHandler @Inject()(userViewDao: UserViewDao) {
             name = user.name.getOrElse(userView.name),
             email = user.email.getOrElse(userView.email)
           )
-          IO.fromFuture(IO(userViewDao.update(newUserView))).unsafeRunSync()
+          IO.fromFuture(IO(userViewDao.upsert(newUserView))).unsafeRunSync()
         }
       }
     }
@@ -80,12 +80,8 @@ class UserViewDao {
 
   private lazy val db = DatabaseConfig.forConfig[JdbcProfile]("postgres").db
 
-  def insert(userView: UserView): Future[Int] = db.run {
-    viewTable += userView
-  }
-
-  def update(userView: UserView): Future[Int] = db.run {
-    viewTable.update(userView)
+  def upsert(userView: UserView): Future[Int] = db.run {
+    viewTable.insertOrUpdate(userView)
   }
 
   def findByUuid(uuid: UUID): Future[Seq[UserView]] = db.run {

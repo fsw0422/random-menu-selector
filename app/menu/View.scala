@@ -50,7 +50,7 @@ class ViewHandler @Inject()(
         link = menu.link.getOrElse(""),
         selectedCount = menu.selectedCount.getOrElse(0)
       )
-      IO.fromFuture(IO(menuViewDao.insert(newMenuView)))
+      IO.fromFuture(IO(menuViewDao.upsert(newMenuView)))
     }
   }
 
@@ -66,7 +66,7 @@ class ViewHandler @Inject()(
             link = menu.link.getOrElse(menuView.link),
             selectedCount = menu.selectedCount.getOrElse(menuView.selectedCount)
           )
-          IO.fromFuture(IO(menuViewDao.update(newMenuView))).unsafeRunSync()
+          IO.fromFuture(IO(menuViewDao.upsert(newMenuView))).unsafeRunSync()
         }
       }
     }
@@ -163,12 +163,8 @@ class MenuViewDao {
 
   private lazy val db = DatabaseConfig.forConfig[JdbcProfile]("postgres").db
 
-  def insert(menuView: MenuView): Future[Int] = db.run {
-    viewTable += menuView
-  }
-
-  def update(menuView: MenuView): Future[Int] = db.run {
-    viewTable.update(menuView)
+  def upsert(menuView: MenuView): Future[Int] = db.run {
+    viewTable.insertOrUpdate(menuView)
   }
 
   def findByUuid(uuid: UUID): Future[Seq[MenuView]] = db.run {

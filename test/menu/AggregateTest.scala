@@ -62,7 +62,7 @@ class AggregateTest extends FlatSpec
     Given("An event insertion is successful")
     doReturn(Future(1)).when(eventDao).insert(any[Event])
     And("menu insertion is successful")
-    doReturn(Future(1)).when(menuViewDao).insert(any[MenuView])
+    doReturn(Future(1)).when(menuViewDao).upsert(any[MenuView])
     And("menu insertion is successful")
 
     When("Register menu")
@@ -85,7 +85,7 @@ class AggregateTest extends FlatSpec
     assertMenuEvent(eventCaptor.getValue, EventType.MENU_CREATED, menu)
     And("menu insert is called once")
     val menuViewCaptor: ArgumentCaptor[MenuView] = ArgumentCaptor.forClass(classOf[MenuView])
-    verify(menuViewDao, times(1)).insert(menuViewCaptor.capture())
+    verify(menuViewDao, times(1)).upsert(menuViewCaptor.capture())
     assertMenuView(menuViewCaptor.getValue, menu)
   }
 
@@ -94,7 +94,7 @@ class AggregateTest extends FlatSpec
     Given("An event insertion is successful")
     doReturn(Future(1)).when(eventDao).insert(any[Event])
     And("menu update is successful")
-    doReturn(Future(1)).when(menuViewDao).update(any[MenuView])
+    doReturn(Future(1)).when(menuViewDao).upsert(any[MenuView])
     And("menu to edit already exists")
     val menuView = MenuView(
       uuid = uuid,
@@ -126,7 +126,7 @@ class AggregateTest extends FlatSpec
     assertMenuEvent(eventCaptor.getValue, EventType.MENU_UPDATED, menu)
     And("menu update is called once")
     val menuViewCaptor: ArgumentCaptor[MenuView] = ArgumentCaptor.forClass(classOf[MenuView])
-    verify(menuViewDao, times(1)).update(menuViewCaptor.capture())
+    verify(menuViewDao, times(1)).upsert(menuViewCaptor.capture())
     assertMenuView(menuViewCaptor.getValue, menu)
   }
 
@@ -171,7 +171,7 @@ class AggregateTest extends FlatSpec
     Given("An event insertion is successful")
     doReturn(Future(1)).when(eventDao).insert(any[Event])
     And("menu update is successful")
-    doReturn(Future(1)).when(menuViewDao).update(any[MenuView])
+    doReturn(Future(1)).when(menuViewDao).upsert(any[MenuView])
     And("select menu event exists")
     val menu = Menu(
       uuid = Some(uuid),
@@ -227,7 +227,7 @@ class AggregateTest extends FlatSpec
     (eventArg.data \ "selectedCount").as[Int] should equal(menu.selectedCount.get + 1)
     And("menu update is called once")
     val menuViewCaptor: ArgumentCaptor[MenuView] = ArgumentCaptor.forClass(classOf[MenuView])
-    verify(menuViewDao, times(1)).update(menuViewCaptor.capture())
+    verify(menuViewDao, times(1)).upsert(menuViewCaptor.capture())
     val menuViewArg = menuViewCaptor.getValue
     menuViewArg.uuid should equal(menu.uuid.get)
     menuViewArg.selectedCount should equal(menu.selectedCount.get + 1)
