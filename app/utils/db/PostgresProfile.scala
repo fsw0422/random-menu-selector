@@ -2,8 +2,8 @@ package utils.db
 
 import com.github.tminglei.slickpg._
 import play.api.libs.json.{JsValue, Json}
-import slick.basic.{Capability, DatabaseConfig}
-import slick.jdbc.{JdbcCapabilities, JdbcProfile}
+import slick.basic.Capability
+import slick.jdbc.JdbcCapabilities
 
 trait PostgresProfile
     extends ExPostgresProfile

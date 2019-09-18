@@ -118,7 +118,7 @@ $(function() {
       url: '/v1/menu/view',
       type: 'get',
       data: {
-        name: menuName,
+        name: '',
       }
     })
     .done(function(response) {

@@ -6,7 +6,7 @@ import cats.effect.IO
 import com.typesafe.config.Config
 import event.{Event, EventDao, EventType}
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.json.Json
 import utils.{GenericToolset, ResponseMessage}
 
 import scala.concurrent.Future
