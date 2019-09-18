@@ -2,28 +2,47 @@ package menu
 
 import java.util.UUID
 
-import auth.Auth
-import cats.data.{OptionT, State}
 import cats.effect.IO
 import com.typesafe.config.Config
 import event.{Event, EventDao, EventType}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsObject, JsValue, Json}
-import user.{User, UserViewDao}
-import utils.{Email, EmailProperty, EmailSender, ResponseMessage}
+import utils.{GenericToolset, ResponseMessage}
 
-import scala.util.Random
+import scala.concurrent.Future
 
 final case class Menu(
-  uuid: Option[UUID] = Some(UUID.randomUUID()),
-  name: String,
-  ingredients: Seq[String],
-  recipe: String,
-  link: String,
-  selectedCount: Option[Int] = Some(0)
-)
+  uuid: Option[UUID],
+  name: Option[String],
+  ingredients: Option[Seq[String]],
+  recipe: Option[String],
+  link: Option[String],
+  selectedCount: Option[Int],
+  passwordAttempt: Option[String]
+) {
+
+  def validateRegisterParams[A](notValid: => A)(valid: Menu => A): A = {
+    (this.ingredients.isDefined, this.link.isDefined, this.name.isDefined, this.recipe.isDefined) match {
+      case (true, true, true, true) =>
+        valid.apply(this)
+      case _ =>
+        notValid
+    }
+  }
+
+  def validateEditParams[A](notValid: => A)(valid: Menu => A): A = {
+    (this.uuid.isDefined) match {
+      case true =>
+        valid.apply(this)
+      case _ =>
+        notValid
+    }
+  }
+}
 
 object Menu {
+
+  val aggregateName = "MENU"
 
   implicit val jsonFormatter = Json
     .using[Json.WithDefaultValues]
@@ -33,154 +52,167 @@ object Menu {
 @Singleton
 class Aggregate @Inject()(
   config: Config,
-  emailSender: EmailSender,
-  auth: Auth,
+  genericToolset: GenericToolset,
   eventDao: EventDao,
-  menuViewDao: MenuViewDao,
-  userViewDao: UserViewDao
+  viewHandler: ViewHandler
 ) {
 
-  private val emailUser = config.getString("email.user")
-  private val emailPassword = config.getString("email.password")
-
-  def createOrUpdateMenu(body: JsValue): IO[Either[String, String]] = {
-    auth.authenticate(body)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) { menuJson =>
-      val result = for {
-        response <- OptionT.liftF {
+  def register(menuOpt: Option[Menu]): IO[Either[String, String]] = {
+    menuOpt.fold {
+      val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_ERROR))
+      result
+    } { menu =>
+      authenticate(menu) { menu =>
+        menu.validateRegisterParams {
+          val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_MISSING))
+          result
+        } { menu =>
+          val newMenu = menu.copy(uuid = Some(genericToolset.randomUUID()), selectedCount = Some(0))
           val event = Event(
-            `type` = EventType.MENU_CREATED_OR_UPDATED,
-            data = Some(menuJson),
+            uuid = Some(genericToolset.randomUUID()),
+            `type` = EventType.MENU_CREATED,
+            aggregate = Menu.aggregateName,
+            data = Json.toJson(newMenu),
+            timestamp = genericToolset.currentTime()
           )
-          eventDao.insert(event)
-        }
-        menu <- OptionT.fromOption[IO](menuJson.asOpt[Menu])
-        _ <- OptionT.liftF(menuViewDao.upsert(menu))
-      } yield  {
-        response match {
-          case 1 => Right(ResponseMessage.SUCCESS)
-          case _ => Left(ResponseMessage.FAILED)
+          for {
+            eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
+            viewResult <- viewHandler.create(newMenu)
+          } yield {
+            (eventResult, viewResult) match {
+              case (1, 1) =>
+                Right(ResponseMessage.SUCCESS)
+              case _ =>
+                Left(ResponseMessage.FAILED)
+            }
+          }
         }
       }
-      result.value.map(_.getOrElse(Left(ResponseMessage.NO_SUCH_IDENTITY)))
     }
   }
 
-  def deleteMenu(body: JsValue): IO[Either[String, String]] = {
-    auth.authenticate(body)(IO.pure(Left(ResponseMessage.UNAUTHORIZED))) { targetMenuUuidJson =>
-      val result = for {
-        response <- OptionT.liftF {
+  def edit(menuOpt: Option[Menu]): IO[Either[String, String]] = {
+    menuOpt.fold {
+      val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_ERROR))
+      result
+    } { menu =>
+      menu.validateEditParams {
+        val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_MISSING))
+        result
+      } { menu =>
+        authenticate(menu) { menu =>
           val event = Event(
-            `type` = EventType.MENU_DELETED,
-            data = Some(targetMenuUuidJson),
+            uuid = Some(genericToolset.randomUUID()),
+            `type` = EventType.MENU_UPDATED,
+            aggregate = Menu.aggregateName,
+            data = Json.toJson(menu),
+            timestamp = genericToolset.currentTime()
           )
-          eventDao.insert(event)
-        }
-        targetMenuUuid <- OptionT.fromOption[IO]((targetMenuUuidJson \ "uuid").asOpt[String].map(UUID.fromString))
-        _ <- OptionT.liftF(menuViewDao.delete(targetMenuUuid))
-      } yield {
-        response match {
-          case 1 => Right(ResponseMessage.SUCCESS)
-          case _ => Left(ResponseMessage.FAILED)
+          for {
+            eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
+            viewResult <- viewHandler.update(menu)
+          } yield {
+            (eventResult, viewResult) match {
+              case (1, 1) =>
+                Right(ResponseMessage.SUCCESS)
+              case _ =>
+                Left(ResponseMessage.FAILED)
+            }
+          }
         }
       }
-      result.value.map(_.getOrElse(Left(ResponseMessage.NO_SUCH_IDENTITY)))
     }
   }
 
-  /*
-   * TODO: Change this API to accept menu UUID
-   *       This means that shuffling should be delegated to caller
-   *       Aggregate should not refer to previous state by querying a view
-   */
-  def selectRandomMenu(): IO[Either[String, String]] = {
-    val result = for {
-      menus <- OptionT.liftF(menuViewDao.findAll())
-      selectedMenu <- OptionT.fromOption[IO](Random.shuffle(menus).headOption)
-
-      updatedSelectedMenu = incrementSelectedCount(selectedMenu)
-      response <- OptionT.liftF {
+  def remove(menuOpt: Option[Menu]): IO[Either[String, String]] = {
+    menuOpt.fold {
+      val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_ERROR))
+      result
+    } { menu =>
+      authenticate(menu) { menu =>
+        val menuUuid = menu.uuid.getOrElse(UUID.fromString(""))
         val event = Event(
-          `type` = EventType.MENU_SELECTED,
-          data = Some(Json.toJson(updatedSelectedMenu))
+          uuid = Some(genericToolset.randomUUID()),
+          `type` = EventType.MENU_DELETED,
+          aggregate = Menu.aggregateName,
+          data = Json.obj("uuid" -> Json.toJson(menuUuid)),
+          timestamp = genericToolset.currentTime()
         )
-        eventDao.insert(event)
+        for {
+          eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
+          viewResult <- viewHandler.delete(menuUuid)
+        } yield {
+          (eventResult, viewResult) match {
+            case (1, 1) =>
+              Right(ResponseMessage.SUCCESS)
+            case _ =>
+              Left(ResponseMessage.FAILED)
+          }
+        }
       }
-      _ <- OptionT.liftF(menuViewDao.upsert(updatedSelectedMenu))
-      userViews <- OptionT.liftF(userViewDao.findAll())
-      _ <- OptionT.liftF(sendMenusToAllUsers(updatedSelectedMenu, userViews))
-    } yield {
-      response match {
-        case 1 => Right(ResponseMessage.SUCCESS)
-        case _ => Left(ResponseMessage.FAILED)
+    }
+  }
+
+  def selectMenu(uuidOpt: Option[UUID]): IO[Either[String, String]] = {
+    uuidOpt.fold {
+      val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_ERROR))
+      result
+    } { selectedUuid =>
+      val latestSelectedMenuEvents = IO.fromFuture(IO(getLatestSelectedMenuEvents(selectedUuid))).unsafeRunSync()
+      val newMenu = latestSelectedMenuEvents.headOption.fold {
+        Menu(
+          uuid = Some(selectedUuid),
+          name = None,
+          ingredients = None,
+          recipe = None,
+          link = None,
+          selectedCount = Some(0),
+          passwordAttempt = None
+        )
+      } { latestSelectedMenuEvent =>
+        val latestSelectedMenu = latestSelectedMenuEvent.data.as[Menu]
+        latestSelectedMenu.copy(selectedCount = latestSelectedMenu.selectedCount.map(_ + 1))
+      }
+
+      val event = Event(
+        uuid = Some(genericToolset.randomUUID()),
+        `type` = EventType.MENU_SELECTED,
+        aggregate = Menu.aggregateName,
+        data = Json.toJson(newMenu),
+        timestamp = genericToolset.currentTime()
+      )
+      for {
+        eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
+        menu = event.data.as[Menu]
+        viewResult <- viewHandler.update(menu)
+      } yield {
+        (eventResult, viewResult) match {
+          case (1, 1) =>
+            viewHandler.sendMenuToAllUsers(menu).unsafeRunSync()
+            Right(ResponseMessage.SUCCESS)
+          case _ =>
+            Left(ResponseMessage.FAILED)
+        }
       }
     }
-    result.value.map(_.getOrElse(Left(ResponseMessage.NO_SUCH_IDENTITY)))
   }
 
-  private def update(initialMenuView: Menu, menu: Menu): Menu = {
-    val updatedState = State[Menu, Unit] { oldMenuView =>
-      val newMenuView = oldMenuView.copy(
-        name = menu.name,
-        ingredients = menu.ingredients,
-        recipe = menu.recipe,
-        link = menu.link
-      )
-      (newMenuView, ())
+  private def getLatestSelectedMenuEvents(uuid: UUID): Future[Seq[Event]] = {
+    eventDao.findByTypeAndDataUuidSortedByTimestamp(Set(EventType.MENU_SELECTED), uuid)
+  }
+
+  private def authenticate[R](menu: Menu, password: String = config.getString("write.password"))
+  (accessGranted: Menu => IO[Either[String, R]]): IO[Either[String, R]] = {
+    menu.passwordAttempt.fold {
+      val result: IO[Either[String, R]] = IO.pure(Left(ResponseMessage.UNAUTHORIZED))
+      result
+    } { pa =>
+      if (pa != password) {
+        val result: IO[Either[String, R]] = IO.pure(Left(ResponseMessage.UNAUTHORIZED))
+        result
+      } else {
+        accessGranted(menu)
+      }
     }
-    val (updated, void) = updatedState.run(initialMenuView).value
-    updated
-  }
-
-  private def incrementSelectedCount(initialMenuView: Menu): Menu = {
-    val selectedCountIncrementedState = State[Menu, Unit] { oldMenuView =>
-      val newMenuView = oldMenuView.copy(selectedCount = oldMenuView.selectedCount.map(_ + 1))
-      (newMenuView, ())
-    }
-    val (selectedCountIncremented, void) = selectedCountIncrementedState.run(initialMenuView).value
-    selectedCountIncremented
-  }
-
-  private def sendMenusToAllUsers(menu: Menu, users: Seq[User]): IO[Unit] = {
-    emailSender.sendSMTP(
-      emailUser,
-      emailPassword,
-      EmailProperty.gmailProperties,
-      Email(
-        recipients = users.map(user => user.email).toArray,
-        subject = "Today's Menu",
-        message = s"""
-        <html>
-          <head>
-          </head>
-          <body>
-
-            <b>Menu</b>
-            <p>
-          ${menu.name}
-            </p>
-            <br>
-
-            <b>Ingredients</b>
-            <p>
-          ${menu.ingredients.mkString("<br>")}
-            </p>
-            <br>
-
-            <b>Recipe</b>
-            <p>
-          ${menu.recipe}
-            </p>
-            <br>
-
-            <b>Link</b>
-            <p>
-            <a href=${menu.link}>${menu.name}</a>
-            </p>
-
-          </body>
-        </html>
-          """,
-      )
-    )
   }
 }

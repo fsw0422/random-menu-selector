@@ -25,7 +25,7 @@ $(function() {
     var link = $("#link").val()
     var password = $("#password").val()
     $.ajax({
-      url: '/menu',
+      url: '/v1/menu',
       type: 'post',
       contentType: 'application/json',
       data: JSON.stringify({
@@ -57,7 +57,7 @@ $(function() {
     var uuid = $("#uuid").val()
     var password = $("#password").val()
     $.ajax({
-      url: '/menu',
+      url: '/v1/menu',
       type: 'delete',
       contentType: 'application/json',
       data: JSON.stringify({
@@ -83,23 +83,39 @@ $(function() {
 
   $('#random').click(function() {
     $.ajax({
-      url: '/menu/random',
-      type: 'post',
-      contentType: 'application/json',
-      data: JSON.stringify({})
+      url: '/v1/menu/view',
+      type: 'get',
+      data: {
+        name: menuName,
+      }
     })
     .done(function(response) {
-      var uuid = response.result
-      alert("Random menu [" + uuid + "] has been sent!")
+      var menuTableBody = $('#menu_table > tbody')
+      menuTableBody.empty()
+      var menus = response.result
+      var randomMenu = menus[Math.floor(Math.random() * menus.length)];
+			$.ajax({
+				url: '/v1/menu/random',
+				type: 'post',
+				contentType: 'application/json',
+				data: JSON.stringify({ 'uuid': randomMenu.uuid })
+			})
+			.done(function(response) {
+				var uuid = response.result
+				alert("Random menu [" + uuid + "] has been sent!")
+			})
+			.fail(function(jqXHR, textStatus) {
+				alert("Random select failure")
+			})
     })
     .fail(function(jqXHR, textStatus) {
-      alert("Random select failure")
+      alert(textStatus)
     })
   })
 
   function searchMenu(menuName) {
     $.ajax({
-      url: '/menu/view',
+      url: '/v1/menu/view',
       type: 'get',
       data: {
         name: menuName,

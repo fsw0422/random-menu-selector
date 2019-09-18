@@ -3,62 +3,104 @@ package user
 import java.util.UUID
 
 import cats.effect.IO
-import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Singleton
-import utils.db.Db
+import javax.inject.{Inject, Singleton}
+import play.api.libs.json.Json
+import slick.basic.DatabaseConfig
+import slick.jdbc.JdbcProfile
+
+import scala.concurrent.Future
+
+final case class UserView(
+  uuid: UUID,
+  name: String,
+  email: String
+)
+
+object UserView {
+
+  implicit val jsonFormat = Json
+    .using[Json.WithDefaultValues]
+    .format[UserView]
+}
 
 @Singleton
-class UserViewDao extends Db with LazyLogging {
+class UserViewHandler @Inject()(userViewDao: UserViewDao) {
+
+  def create(user: User): IO[Int] = {
+    user.uuid.fold(IO.pure(0)) { userUuid =>
+      val newMenuView = UserView(
+        uuid = userUuid,
+        email = user.email.getOrElse(""),
+        name = user.name.getOrElse("")
+      )
+      IO.fromFuture(IO(userViewDao.insert(newMenuView)))
+    }
+  }
+
+  def update(user: User): IO[Int] = {
+    user.uuid.fold(IO.pure(0)) { userUuid =>
+      IO.fromFuture(IO(userViewDao.findByUuid(userUuid))).map { userViews =>
+        userViews.headOption.fold(0) { userView =>
+          val newUserView = userView.copy(
+            uuid = userUuid,
+            name = user.name.getOrElse(userView.name),
+            email = user.email.getOrElse(userView.email)
+          )
+          IO.fromFuture(IO(userViewDao.update(newUserView))).unsafeRunSync()
+        }
+      }
+    }
+  }
+
+  def delete(uuid: UUID): IO[Int] = {
+    IO.fromFuture(IO(userViewDao.delete(uuid)))
+  }
+
+  def searchAll(): IO[Seq[UserView]] = {
+    IO.fromFuture(IO(userViewDao.findAll()))
+  }
+}
+
+@Singleton
+class UserViewDao {
 
   import utils.db.PostgresProfile.api._
 
-  val tableName = "user_view"
+  class UserViewTable(tag: Tag) extends Table[UserView](tag, "user_view") {
 
-  class UserViewTable(tag: Tag)
-    extends Table[User](tag, tableName) {
     def uuid = column[UUID]("uuid", O.PrimaryKey)
     def name = column[String]("name")
     def email = column[String]("email")
 
     def * =
-      (uuid.?, name, email) <> ((User.apply _).tupled, User.unapply)
+      (uuid, name, email) <> ((UserView.apply _).tupled, UserView.unapply)
   }
 
-  private val userViewTable = TableQuery[UserViewTable]
+  private lazy val viewTable = TableQuery[UserViewTable]
 
-  override def setup(): IO[Unit] = IO.fromFuture {
-    IO { db.run(userViewTable.schema.create) }
+  private lazy val db = DatabaseConfig.forConfig[JdbcProfile]("postgres").db
+
+  def insert(userView: UserView): Future[Int] = db.run {
+    viewTable += userView
   }
 
-  override def teardown(): IO[Unit] = IO.fromFuture {
-    IO { db.run(userViewTable.schema.drop) }
+  def update(userView: UserView): Future[Int] = db.run {
+    viewTable.update(userView)
   }
 
-  def upsert(userView: User): IO[Int] = IO.fromFuture {
-    IO { db.run(userViewTable.insertOrUpdate(userView)) }
+  def findByUuid(uuid: UUID): Future[Seq[UserView]] = db.run {
+    viewTable
+      .filter(userView => userView.uuid === uuid)
+      .result
   }
 
-  def findByEmail(email: String): IO[Seq[User]] = IO.fromFuture {
-    IO {
-      db.run {
-        userViewTable
-          .filter(userView => userView.email === email)
-          .result
-      }
-    }
+  def findAll(): Future[Seq[UserView]] = db.run {
+    viewTable.result
   }
 
-  def findAll(): IO[Seq[User]] = IO.fromFuture {
-    IO { db.run(userViewTable.result) }
-  }
-
-  def delete(uuid: UUID): IO[Int] = IO.fromFuture {
-    IO {
-      db.run {
-        userViewTable
-          .filter(menuView => menuView.uuid === uuid)
-          .delete
-      }
-    }
+  def delete(uuid: UUID): Future[Int] = db.run {
+    viewTable
+      .filter(menuView => menuView.uuid === uuid)
+      .delete
   }
 }
