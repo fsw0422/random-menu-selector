@@ -29,7 +29,6 @@ $(function() {
       type: 'post',
       contentType: 'application/json',
       data: JSON.stringify({
-      	'version': "1.0",
         'name': name,
         'ingredients': ingredients,
         'recipe': recipe,
@@ -62,7 +61,6 @@ $(function() {
       type: 'delete',
       contentType: 'application/json',
       data: JSON.stringify({
-      	'version': "1.0",
         'uuid': uuid,
         'password': password
       })
@@ -85,17 +83,33 @@ $(function() {
 
   $('#random').click(function() {
     $.ajax({
-      url: '/v1/menu/random',
-      type: 'post',
-      contentType: 'application/json',
-      data: JSON.stringify({ 'type': "1.0" })
+      url: '/v1/menu/view',
+      type: 'get',
+      data: {
+        name: menuName,
+      }
     })
     .done(function(response) {
-      var uuid = response.result
-      alert("Random menu [" + uuid + "] has been sent!")
+      var menuTableBody = $('#menu_table > tbody')
+      menuTableBody.empty()
+      var menus = response.result
+      var randomMenu = menus[Math.floor(Math.random() * menus.length)];
+			$.ajax({
+				url: '/v1/menu/random',
+				type: 'post',
+				contentType: 'application/json',
+				data: JSON.stringify({ 'uuid': randomMenu.uuid })
+			})
+			.done(function(response) {
+				var uuid = response.result
+				alert("Random menu [" + uuid + "] has been sent!")
+			})
+			.fail(function(jqXHR, textStatus) {
+				alert("Random select failure")
+			})
     })
     .fail(function(jqXHR, textStatus) {
-      alert("Random select failure")
+      alert(textStatus)
     })
   })
 
