@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#sbt docker:publish
+sbt docker:publish
 
 echo Enter configuration unlock passphrase:
 read -s password
