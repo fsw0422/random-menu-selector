@@ -3,7 +3,7 @@ package event
 import java.util.UUID
 
 import event.EventType.EventType
-import javax.inject.{Inject, Singleton}
+import javax.inject.Singleton
 import org.joda.time.DateTime
 import play.api.libs.json.JsValue
 import slick.basic.DatabaseConfig
@@ -44,7 +44,7 @@ class EventDao {
     def uuid = column[UUID]("uuid", O.PrimaryKey)
     def timestamp = column[DateTime]("timestamp")
     def `type` = column[EventType]("type")
-    def version = column[String]("version")
+    def version = column[String]("aggregate")
     def data = column[JsValue]("data")
 
     def * =
