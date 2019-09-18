@@ -26,7 +26,7 @@ $(function() {
     var link = $("#link").val()
     var password = $("#password").val()
 
-    if (uuid) {
+    if (!uuid) {
 			$.ajax({
 				url: '/v1/menu',
 				type: 'post',
