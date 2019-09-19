@@ -2,6 +2,7 @@ package menu
 
 import java.util.UUID
 
+import cats.data.OptionT
 import cats.effect.IO
 import com.typesafe.config.Config
 import javax.inject.{Inject, Singleton}
@@ -78,16 +79,12 @@ class ViewHandler @Inject()(
 
   def sendMenuToAllUsers(menu: Menu): IO[Unit] = {
     menu.uuid.fold(IO.pure(())) { menuUuid =>
-      val newMenuView = MenuView(
-        uuid = menuUuid,
-        name = menu.name.getOrElse(""),
-        ingredients = menu.ingredients.getOrElse(Seq("")),
-        recipe = menu.recipe.getOrElse(""),
-        link = menu.link.getOrElse(""),
-        selectedCount = menu.selectedCount.getOrElse(0)
-      )
-      IO.fromFuture(IO(userViewDao.findAll())).flatMap { userViews =>
-        sendMenu(newMenuView, userViews)
+      IO.fromFuture(IO(menuViewDao.findByUuid(menuUuid))).flatMap { menuViewOpt =>
+        menuViewOpt.fold(IO.pure(())) { menuView =>
+          IO.fromFuture(IO(userViewDao.findAll())).flatMap { userViews =>
+            sendMenu(menuView, userViews)
+          }
+        }
       }
     }
   }
@@ -167,10 +164,11 @@ class MenuViewDao {
     viewTable.insertOrUpdate(menuView)
   }
 
-  def findByUuid(uuid: UUID): Future[Seq[MenuView]] = db.run {
+  def findByUuid(uuid: UUID): Future[Option[MenuView]] = db.run {
     viewTable
       .filter(menuView => menuView.uuid === uuid)
       .result
+      .headOption
   }
 
   def findByNameLike(name: String): Future[Seq[MenuView]] = db.run {

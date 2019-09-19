@@ -104,7 +104,7 @@ class AggregateTest extends FlatSpec
       link = "http://haha.com",
       selectedCount = 0
     )
-    doReturn(Future(Seq(menuView))).when(menuViewDao).findByUuid(any[UUID])
+    doReturn(Future(Option(menuView))).when(menuViewDao).findByUuid(any[UUID])
 
     When("Edit menu")
     val menu = Menu(
@@ -199,8 +199,7 @@ class AggregateTest extends FlatSpec
       link = "http://haha.com",
       selectedCount = 0
     )
-    val menuViews = Seq(menuView)
-    doReturn(Future(menuViews)).when(menuViewDao).findByUuid(any[UUID])
+    doReturn(Future(Option(menuView))).when(menuViewDao).findByUuid(any[UUID])
     And("users to send already exists")
     val userView = UserView(
       uuid = uuid,

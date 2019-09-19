@@ -84,10 +84,11 @@ class UserViewDao {
     viewTable.insertOrUpdate(userView)
   }
 
-  def findByUuid(uuid: UUID): Future[Seq[UserView]] = db.run {
+  def findByUuid(uuid: UUID): Future[Option[UserView]] = db.run {
     viewTable
       .filter(userView => userView.uuid === uuid)
       .result
+      .headOption
   }
 
   def findAll(): Future[Seq[UserView]] = db.run {
