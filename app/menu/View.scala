@@ -2,7 +2,6 @@ package menu
 
 import java.util.UUID
 
-import cats.data.OptionT
 import cats.effect.IO
 import com.typesafe.config.Config
 import javax.inject.{Inject, Singleton}
@@ -16,18 +15,19 @@ import scala.concurrent.Future
 
 final case class MenuView(
   uuid: UUID,
-  name: String,
-  ingredients: Seq[String],
-  recipe: String,
-  link: String,
-  selectedCount: Int
-)
+  name: Option[String],
+  ingredients: Option[Seq[String]],
+  recipe: Option[String],
+  link: Option[String],
+  selectedCount: Option[Int]
+) {
+
+  def validate[A](notValid: => A)(valid: MenuView => A): A = _ //TODO: implement
+}
 
 object MenuView {
 
-  implicit val jsonFormatter = Json
-    .using[Json.WithDefaultValues]
-    .format[MenuView]
+  implicit val jsonFormatter = Json.format[MenuView]
 }
 
 @Singleton
@@ -45,11 +45,11 @@ class ViewHandler @Inject()(
     menu.uuid.fold(IO.pure(0)) { menuUuid =>
       val newMenuView = MenuView(
         uuid = menuUuid,
-        name = menu.name.getOrElse(""),
-        ingredients = menu.ingredients.getOrElse(Seq("")),
-        recipe = menu.recipe.getOrElse(""),
-        link = menu.link.getOrElse(""),
-        selectedCount = menu.selectedCount.getOrElse(0)
+        name = menu.name,
+        ingredients = menu.ingredients,
+        recipe = menu.recipe,
+        link = menu.link,
+        selectedCount = menu.selectedCount
       )
       IO.fromFuture(IO(menuViewDao.upsert(newMenuView)))
     }
@@ -58,7 +58,7 @@ class ViewHandler @Inject()(
   def update(menu: Menu): IO[Int] = {
     menu.uuid.fold(IO.pure(0)) { menuUuid =>
       IO.fromFuture(IO(menuViewDao.findByUuid(menuUuid))).map { menuViews =>
-        menuViews.headOption.fold(0) { menuView =>
+        menuViews.fold(0) { menuView =>
           val newMenuView = menuView.copy(
             uuid = menuUuid,
             name = menu.name.getOrElse(menuView.name),

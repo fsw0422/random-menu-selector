@@ -12,15 +12,16 @@ import scala.concurrent.Future
 
 final case class UserView(
   uuid: UUID,
-  name: String,
-  email: String
-)
+  name: Option[String],
+  email: Option[String]
+) {
+
+  def validate[A](notValid: => A)(valid: UserView => A): A = _ //TODO: implement
+}
 
 object UserView {
 
-  implicit val jsonFormat = Json
-    .using[Json.WithDefaultValues]
-    .format[UserView]
+  implicit val jsonFormat = Json.format[UserView]
 }
 
 @Singleton
@@ -30,8 +31,8 @@ class UserViewHandler @Inject()(userViewDao: UserViewDao) {
     user.uuid.fold(IO.pure(0)) { userUuid =>
       val newMenuView = UserView(
         uuid = userUuid,
-        email = user.email.getOrElse(""),
-        name = user.name.getOrElse("")
+        email = user.email,
+        name = user.name
       )
       IO.fromFuture(IO(userViewDao.upsert(newMenuView)))
     }
@@ -73,7 +74,7 @@ class UserViewDao {
     def email = column[String]("email")
 
     def * =
-      (uuid, name, email) <> ((UserView.apply _).tupled, UserView.unapply)
+      (uuid, name.?, email.?) <> ((UserView.apply _).tupled, UserView.unapply)
   }
 
   private lazy val viewTable = TableQuery[UserViewTable]

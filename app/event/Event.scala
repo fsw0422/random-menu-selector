@@ -21,12 +21,15 @@ object EventType extends Enumeration {
 }
 
 final case class Event(
-  uuid: Option[UUID],
-  timestamp: DateTime,
-  `type`: EventType,
-  aggregate: String,
-  data: JsValue
-)
+  uuid: UUID,
+  timestamp: Option[DateTime],
+  `type`: Option[EventType],
+  aggregate: Option[String],
+  data: Option[JsValue]
+) {
+
+  def validate[A](notValid: => A)(valid: Event => A): A = _ //TODO: implement
+}
 
 @Singleton
 class EventDao {
@@ -48,7 +51,7 @@ class EventDao {
     def data = column[JsValue]("data")
 
     def * =
-      (uuid.?, timestamp, `type`, version, data) <> ((Event.apply _).tupled, Event.unapply)
+      (uuid, timestamp.?, `type`.?, version.?, data.?) <> ((Event.apply _).tupled, Event.unapply)
   }
 
   private lazy val eventTable = TableQuery[EventTable]
