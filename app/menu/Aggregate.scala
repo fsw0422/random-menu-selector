@@ -69,15 +69,15 @@ class Aggregate @Inject()(
         } { menu =>
           val newMenu = menu.copy(uuid = Some(genericToolset.randomUUID()), selectedCount = Some(0))
           val event = Event(
-            uuid = Some(genericToolset.randomUUID()),
-            `type` = EventType.MENU_CREATED,
-            aggregate = Menu.aggregateName,
-            data = Json.toJson(newMenu),
-            timestamp = genericToolset.currentTime()
+            uuid = genericToolset.randomUUID(),
+            `type` = Some(EventType.MENU_CREATED),
+            aggregate = Some(Menu.aggregateName),
+            data = Some(Json.toJson(newMenu)),
+            timestamp = Some(genericToolset.currentTime())
           )
           for {
             eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
-            viewResult <- viewHandler.create(newMenu)
+            viewResult <- viewHandler.createOrUpdate(newMenu)
           } yield {
             (eventResult, viewResult) match {
               case (1, 1) =>
@@ -102,15 +102,15 @@ class Aggregate @Inject()(
       } { menu =>
         authenticate(menu) { menu =>
           val event = Event(
-            uuid = Some(genericToolset.randomUUID()),
-            `type` = EventType.MENU_UPDATED,
-            aggregate = Menu.aggregateName,
-            data = Json.toJson(menu),
-            timestamp = genericToolset.currentTime()
+            uuid = genericToolset.randomUUID(),
+            `type` = Some(EventType.MENU_UPDATED),
+            aggregate = Some(Menu.aggregateName),
+            data = Some(Json.toJson(menu)),
+            timestamp = Some(genericToolset.currentTime())
           )
           for {
             eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
-            viewResult <- viewHandler.update(menu)
+            viewResult <- viewHandler.createOrUpdate(menu)
           } yield {
             (eventResult, viewResult) match {
               case (1, 1) =>
@@ -132,11 +132,11 @@ class Aggregate @Inject()(
       authenticate(menu) { menu =>
         val menuUuid = menu.uuid.getOrElse(UUID.fromString(""))
         val event = Event(
-          uuid = Some(genericToolset.randomUUID()),
-          `type` = EventType.MENU_DELETED,
-          aggregate = Menu.aggregateName,
-          data = Json.obj("uuid" -> Json.toJson(menuUuid)),
-          timestamp = genericToolset.currentTime()
+          uuid = genericToolset.randomUUID(),
+          `type` = Some(EventType.MENU_DELETED),
+          aggregate = Some(Menu.aggregateName),
+          data = Some(Json.obj("uuid" -> Json.toJson(menuUuid))),
+          timestamp = Some(genericToolset.currentTime())
         )
         for {
           eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
@@ -170,21 +170,22 @@ class Aggregate @Inject()(
           passwordAttempt = None
         )
       } { latestSelectedMenuEvent =>
-        val latestSelectedMenu = latestSelectedMenuEvent.data.as[Menu]
+        val latestSelectedMenu = latestSelectedMenuEvent.data.fold() { data =>
+          data.as[Menu]
         latestSelectedMenu.copy(selectedCount = latestSelectedMenu.selectedCount.map(_ + 1))
+          }
       }
 
       val event = Event(
-        uuid = Some(genericToolset.randomUUID()),
-        `type` = EventType.MENU_SELECTED,
-        aggregate = Menu.aggregateName,
-        data = Json.toJson(newMenu),
-        timestamp = genericToolset.currentTime()
+        uuid = genericToolset.randomUUID(),
+        `type` = Some(EventType.MENU_SELECTED),
+        aggregate = Some(Menu.aggregateName),
+        data = Some(Json.toJson(newMenu)),
+        timestamp = Some(genericToolset.currentTime())
       )
       for {
         eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
-        menu = event.data.as[Menu]
-        viewResult <- viewHandler.update(menu)
+        viewResult <- viewHandler.createOrUpdate(newMenu)
       } yield {
         (eventResult, viewResult) match {
           case (1, 1) =>

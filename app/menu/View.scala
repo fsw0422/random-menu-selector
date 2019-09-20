@@ -9,7 +9,7 @@ import play.api.libs.json.Json
 import slick.basic.DatabaseConfig
 import slick.jdbc.JdbcProfile
 import user.{UserView, UserViewDao}
-import utils.{Email, EmailSender}
+import utils.{Email, EmailSender, GenericToolset}
 
 import scala.concurrent.Future
 
@@ -33,6 +33,7 @@ object MenuView {
 @Singleton
 class ViewHandler @Inject()(
   config: Config,
+  genericToolset: GenericToolset,
   emailSender: EmailSender,
   menuViewDao: MenuViewDao,
   userViewDao: UserViewDao
@@ -41,9 +42,18 @@ class ViewHandler @Inject()(
   private val emailUser = config.getString("email.user")
   private val emailPassword = config.getString("email.password")
 
-  def create(menu: Menu): IO[Int] = {
-    menu.uuid.fold(IO.pure(0)) { menuUuid =>
-      val newMenuView = MenuView(
+  def createOrUpdate(menu: Menu): IO[Int] = {
+    val newMenuView = menu.uuid.fold {
+      MenuView(
+        uuid = genericToolset.randomUUID(),
+        name = menu.name,
+        ingredients = menu.ingredients,
+        recipe = menu.recipe,
+        link = menu.link,
+        selectedCount = menu.selectedCount
+      )
+    } { menuUuid =>
+      MenuView(
         uuid = menuUuid,
         name = menu.name,
         ingredients = menu.ingredients,
@@ -51,26 +61,8 @@ class ViewHandler @Inject()(
         link = menu.link,
         selectedCount = menu.selectedCount
       )
-      IO.fromFuture(IO(menuViewDao.upsert(newMenuView)))
     }
-  }
-
-  def update(menu: Menu): IO[Int] = {
-    menu.uuid.fold(IO.pure(0)) { menuUuid =>
-      IO.fromFuture(IO(menuViewDao.findByUuid(menuUuid))).map { menuViews =>
-        menuViews.fold(0) { menuView =>
-          val newMenuView = menuView.copy(
-            uuid = menuUuid,
-            name = menu.name.getOrElse(menuView.name),
-            ingredients = menu.ingredients.getOrElse(menuView.ingredients),
-            recipe = menu.recipe.getOrElse(menuView.recipe),
-            link = menu.link.getOrElse(menuView.link),
-            selectedCount = menu.selectedCount.getOrElse(menuView.selectedCount)
-          )
-          IO.fromFuture(IO(menuViewDao.upsert(newMenuView))).unsafeRunSync()
-        }
-      }
-    }
+    IO.fromFuture(IO(menuViewDao.upsert(newMenuView)))
   }
 
   def delete(uuid: UUID): IO[Int] = {
@@ -153,7 +145,7 @@ class MenuViewDao {
     def selectedCount = column[Int]("selected_count")
 
     def * =
-      (uuid, name, ingredients, recipe, link, selectedCount) <> ((MenuView.apply _).tupled, MenuView.unapply)
+      (uuid, name.?, ingredients.?, recipe.?, link.?, selectedCount.?) <> ((MenuView.apply _).tupled, MenuView.unapply)
   }
 
   private lazy val viewTable = TableQuery[MenuViewTable]
