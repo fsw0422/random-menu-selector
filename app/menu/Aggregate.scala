@@ -31,7 +31,7 @@ final case class Menu(
   }
 
   def validateEditParams[A](notValid: => A)(valid: Menu => A): A = {
-    (this.uuid.isDefined) match {
+    this.uuid.isDefined match {
       case true =>
         valid.apply(this)
       case _ =>
@@ -44,9 +44,7 @@ object Menu {
 
   val aggregateName = "MENU"
 
-  implicit val jsonFormatter = Json
-    .using[Json.WithDefaultValues]
-    .format[Menu]
+  implicit val jsonFormatter = Json.format[Menu]
 }
 
 @Singleton
@@ -96,11 +94,11 @@ class Aggregate @Inject()(
       val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_ERROR))
       result
     } { menu =>
-      menu.validateEditParams {
-        val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_MISSING))
-        result
-      } { menu =>
-        authenticate(menu) { menu =>
+      authenticate(menu) { menu =>
+        menu.validateEditParams {
+          val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_MISSING))
+          result
+        } { menu =>
           val event = Event(
             uuid = genericToolset.randomUUID(),
             `type` = Some(EventType.MENU_UPDATED),
@@ -130,23 +128,27 @@ class Aggregate @Inject()(
       result
     } { menu =>
       authenticate(menu) { menu =>
-        val menuUuid = menu.uuid.getOrElse(UUID.fromString(""))
-        val event = Event(
-          uuid = genericToolset.randomUUID(),
-          `type` = Some(EventType.MENU_DELETED),
-          aggregate = Some(Menu.aggregateName),
-          data = Some(Json.obj("uuid" -> Json.toJson(menuUuid))),
-          timestamp = Some(genericToolset.currentTime())
-        )
-        for {
-          eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
-          viewResult <- viewHandler.delete(menuUuid)
-        } yield {
-          (eventResult, viewResult) match {
-            case (1, 1) =>
-              Right(ResponseMessage.SUCCESS)
-            case _ =>
-              Left(ResponseMessage.FAILED)
+        menu.uuid.fold {
+          val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_MISSING))
+          result
+        } { menuUuid =>
+          val event = Event(
+            uuid = genericToolset.randomUUID(),
+            `type` = Some(EventType.MENU_DELETED),
+            aggregate = Some(Menu.aggregateName),
+            data = Some(Json.obj("uuid" -> Json.toJson(menuUuid))),
+            timestamp = Some(genericToolset.currentTime())
+          )
+          for {
+            eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
+            viewResult <- viewHandler.delete(menuUuid)
+          } yield {
+            (eventResult, viewResult) match {
+              case (1, 1) =>
+                Right(ResponseMessage.SUCCESS)
+              case _ =>
+                Left(ResponseMessage.FAILED)
+            }
           }
         }
       }
@@ -158,9 +160,9 @@ class Aggregate @Inject()(
       val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_ERROR))
       result
     } { selectedUuid =>
-      val latestSelectedMenuEvents = IO.fromFuture(IO(getLatestSelectedMenuEvents(selectedUuid))).unsafeRunSync()
-      val newMenu = latestSelectedMenuEvents.headOption.fold {
-        Menu(
+      for {
+        latestSelectedMenuEvents <- IO.fromFuture(IO(getLatestSelectedMenuEvents(selectedUuid)))
+        emptyMenu = Menu(
           uuid = Some(selectedUuid),
           name = None,
           ingredients = None,
@@ -169,27 +171,25 @@ class Aggregate @Inject()(
           selectedCount = Some(0),
           passwordAttempt = None
         )
-      } { latestSelectedMenuEvent =>
-        val latestSelectedMenu = latestSelectedMenuEvent.data.fold() { data =>
-          data.as[Menu]
-        latestSelectedMenu.copy(selectedCount = latestSelectedMenu.selectedCount.map(_ + 1))
+        newMenu = latestSelectedMenuEvents.headOption.fold(emptyMenu) { latestSelectedMenuEvent =>
+          latestSelectedMenuEvent.data.fold(emptyMenu) { data =>
+            val latestSelectedMenu = data.as[Menu]
+            latestSelectedMenu.copy(selectedCount = latestSelectedMenu.selectedCount.map(_ + 1))
           }
-      }
-
-      val event = Event(
-        uuid = genericToolset.randomUUID(),
-        `type` = Some(EventType.MENU_SELECTED),
-        aggregate = Some(Menu.aggregateName),
-        data = Some(Json.toJson(newMenu)),
-        timestamp = Some(genericToolset.currentTime())
-      )
-      for {
+        }
+        event = Event(
+          uuid = genericToolset.randomUUID(),
+          `type` = Some(EventType.MENU_SELECTED),
+          aggregate = Some(Menu.aggregateName),
+          data = Some(Json.toJson(newMenu)),
+          timestamp = Some(genericToolset.currentTime())
+        )
         eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
         viewResult <- viewHandler.createOrUpdate(newMenu)
+        _ <- viewHandler.sendMenuToAllUsers(newMenu)
       } yield {
         (eventResult, viewResult) match {
           case (1, 1) =>
-            viewHandler.sendMenuToAllUsers(menu).unsafeRunSync()
             Right(ResponseMessage.SUCCESS)
           case _ =>
             Left(ResponseMessage.FAILED)

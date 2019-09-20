@@ -26,10 +26,7 @@ final case class Event(
   `type`: Option[EventType],
   aggregate: Option[String],
   data: Option[JsValue]
-) {
-
-  def validate[A](notValid: => A)(valid: Event => A): A = _ //TODO: implement
-}
+)
 
 @Singleton
 class EventDao {

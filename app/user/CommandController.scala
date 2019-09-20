@@ -37,8 +37,8 @@ class CommandController @Inject()(aggregate: Aggregate)
 
   def remove(): Action[JsValue] = {
     Action.async(parse.json) { implicit request =>
-      val uuidOpt = (request.body \ "uuid").asOpt[String].map(UUID.fromString)
-      aggregate.remove(uuidOpt).map {
+      val userOpt = request.body.asOpt[User]
+      aggregate.remove(userOpt).map {
         case Left(errorMessage: String) =>
           Ok(Json.obj("result" -> Json.toJson(errorMessage)))
         case Right(response: String) =>

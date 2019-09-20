@@ -20,10 +20,7 @@ final case class MenuView(
   recipe: Option[String],
   link: Option[String],
   selectedCount: Option[Int]
-) {
-
-  def validate[A](notValid: => A)(valid: MenuView => A): A = _ //TODO: implement
-}
+)
 
 object MenuView {
 
@@ -90,7 +87,7 @@ class ViewHandler @Inject()(
       emailUser,
       emailPassword,
       Email(
-        recipients = userViews.map(userView => userView.email).toArray,
+        recipients = userViews.map(userView => userView.email.getOrElse("")).toArray,
         subject = "Today's Menu",
         //TODO: make as template
         message =

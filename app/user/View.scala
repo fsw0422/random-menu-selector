@@ -7,6 +7,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import slick.basic.DatabaseConfig
 import slick.jdbc.JdbcProfile
+import utils.GenericToolset
 
 import scala.concurrent.Future
 
@@ -14,10 +15,7 @@ final case class UserView(
   uuid: UUID,
   name: Option[String],
   email: Option[String]
-) {
-
-  def validate[A](notValid: => A)(valid: UserView => A): A = _ //TODO: implement
-}
+)
 
 object UserView {
 
@@ -25,32 +23,26 @@ object UserView {
 }
 
 @Singleton
-class UserViewHandler @Inject()(userViewDao: UserViewDao) {
+class UserViewHandler @Inject()(
+  genericToolset: GenericToolset,
+  userViewDao: UserViewDao
+) {
 
-  def create(user: User): IO[Int] = {
-    user.uuid.fold(IO.pure(0)) { userUuid =>
-      val newMenuView = UserView(
+  def createOrUpdate(user: User): IO[Int] = {
+    val newUserView = user.uuid.fold {
+      UserView(
+        uuid = genericToolset.randomUUID(),
+        email = user.email,
+        name = user.name
+      )
+    } { userUuid =>
+      UserView(
         uuid = userUuid,
         email = user.email,
         name = user.name
       )
-      IO.fromFuture(IO(userViewDao.upsert(newMenuView)))
     }
-  }
-
-  def update(user: User): IO[Int] = {
-    user.uuid.fold(IO.pure(0)) { userUuid =>
-      IO.fromFuture(IO(userViewDao.findByUuid(userUuid))).map { userViews =>
-        userViews.headOption.fold(0) { userView =>
-          val newUserView = userView.copy(
-            uuid = userUuid,
-            name = user.name.getOrElse(userView.name),
-            email = user.email.getOrElse(userView.email)
-          )
-          IO.fromFuture(IO(userViewDao.upsert(newUserView))).unsafeRunSync()
-        }
-      }
-    }
+    IO.fromFuture(IO(userViewDao.upsert(newUserView)))
   }
 
   def delete(uuid: UUID): IO[Int] = {
