@@ -186,7 +186,7 @@ class Aggregate @Inject()(
         )
         eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
         viewResult <- viewHandler.createOrUpdate(newMenu)
-        _ <- viewHandler.sendMenuToAllUsers(newMenu)
+        _ <- viewHandler.sendMenuToAllUsers(selectedUuid)
       } yield {
         (eventResult, viewResult) match {
           case (1, 1) =>

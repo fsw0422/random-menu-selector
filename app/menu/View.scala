@@ -66,13 +66,11 @@ class ViewHandler @Inject()(
     IO.fromFuture(IO(menuViewDao.delete(uuid)))
   }
 
-  def sendMenuToAllUsers(menu: Menu): IO[Unit] = {
-    menu.uuid.fold(IO.pure(())) { menuUuid =>
-      IO.fromFuture(IO(menuViewDao.findByUuid(menuUuid))).flatMap { menuViewOpt =>
-        menuViewOpt.fold(IO.pure(())) { menuView =>
-          IO.fromFuture(IO(userViewDao.findAll())).flatMap { userViews =>
-            sendMenu(menuView, userViews)
-          }
+  def sendMenuToAllUsers(menuUuid: UUID): IO[Unit] = {
+    IO.fromFuture(IO(menuViewDao.findByUuid(menuUuid))).flatMap { menuViewOpt =>
+      menuViewOpt.fold(IO.pure(())) { menuView =>
+        IO.fromFuture(IO(userViewDao.findAll())).flatMap { userViews =>
+          sendMenu(menuView, userViews)
         }
       }
     }
@@ -89,7 +87,7 @@ class ViewHandler @Inject()(
       Email(
         recipients = userViews.map(userView => userView.email.getOrElse("")).toArray,
         subject = "Today's Menu",
-        //TODO: make as template
+        //TODO: make as template (this is essential for testing)
         message =
           s"""
         <html>
@@ -99,25 +97,25 @@ class ViewHandler @Inject()(
 
             <b>Menu</b>
             <p>
-          ${menuView.name}
+          ${menuView.name.getOrElse("")}
             </p>
             <br>
 
             <b>Ingredients</b>
             <p>
-          ${menuView.ingredients.mkString("<br>")}
+          ${menuView.ingredients.getOrElse(List()).mkString("<br>")}
             </p>
             <br>
 
             <b>Recipe</b>
             <p>
-          ${menuView.recipe}
+          ${menuView.recipe.getOrElse("")}
             </p>
             <br>
 
             <b>Link</b>
             <p>
-            <a href=${menuView.link}>${menuView.name}</a>
+            <a href=${menuView.link.getOrElse("")}>${menuView.name.getOrElse("")}</a>
             </p>
 
           </body>
