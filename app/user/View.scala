@@ -29,20 +29,24 @@ class UserViewHandler @Inject()(
 ) {
 
   def createOrUpdate(user: User): IO[Int] = {
-    val newUserView = user.uuid.fold {
-      UserView(
-        uuid = genericToolset.randomUUID(),
-        email = user.email,
-        name = user.name
-      )
-    } { userUuid =>
-      UserView(
-        uuid = userUuid,
-        email = user.email,
-        name = user.name
-      )
+    user.uuid.fold(IO.pure(0)) { userUuid =>
+      for {
+        userViewOpt <- IO.fromFuture(IO(userViewDao.findByUuid(userUuid)))
+        newUserView = userViewOpt.fold {
+          UserView(
+            uuid = genericToolset.randomUUID(),
+            email = user.email,
+            name = user.name
+          )
+        } { userView =>
+          userView.copy(
+            email = userView.email.fold(userView.email)(email => Some(email)),
+            name = userView.name.fold(userView.name)(name => Some(name))
+          )
+        }
+        affectedRowNum <- IO.fromFuture(IO(userViewDao.upsert(newUserView)))
+      } yield affectedRowNum
     }
-    IO.fromFuture(IO(userViewDao.upsert(newUserView)))
   }
 
   def delete(uuid: UUID): IO[Int] = {

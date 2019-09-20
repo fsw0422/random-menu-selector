@@ -40,26 +40,30 @@ class ViewHandler @Inject()(
   private val emailPassword = config.getString("email.password")
 
   def createOrUpdate(menu: Menu): IO[Int] = {
-    val newMenuView = menu.uuid.fold {
-      MenuView(
-        uuid = genericToolset.randomUUID(),
-        name = menu.name,
-        ingredients = menu.ingredients,
-        recipe = menu.recipe,
-        link = menu.link,
-        selectedCount = menu.selectedCount
-      )
-    } { menuUuid =>
-      MenuView(
-        uuid = menuUuid,
-        name = menu.name,
-        ingredients = menu.ingredients,
-        recipe = menu.recipe,
-        link = menu.link,
-        selectedCount = menu.selectedCount
-      )
+    menu.uuid.fold(IO.pure(0)) { menuUuid =>
+      for {
+        menuViewOpt <- IO.fromFuture(IO(menuViewDao.findByUuid(menuUuid)))
+        newMenuView = menuViewOpt.fold {
+          MenuView(
+            uuid = genericToolset.randomUUID(),
+            name = menu.name,
+            ingredients = menu.ingredients,
+            recipe = menu.recipe,
+            link = menu.link,
+            selectedCount = menu.selectedCount
+          )
+        } { menuView =>
+          menuView.copy(
+            name = menu.name.fold(menuView.name)(name => Some(name)),
+            ingredients = menu.ingredients.fold(menuView.ingredients)(ingredients => Some(ingredients)),
+            recipe = menu.recipe.fold(menuView.recipe)(recipe => Some(recipe)),
+            link = menu.link.fold(menuView.link)(link => Some(link)),
+            selectedCount = menu.selectedCount.fold(menuView.selectedCount)(selectedCount => Some(selectedCount))
+          )
+        }
+        affectedRowNum <- IO.fromFuture(IO(menuViewDao.upsert(newMenuView)))
+      } yield affectedRowNum
     }
-    IO.fromFuture(IO(menuViewDao.upsert(newMenuView)))
   }
 
   def delete(uuid: UUID): IO[Int] = {

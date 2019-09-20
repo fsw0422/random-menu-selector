@@ -63,7 +63,8 @@ class AggregateTest extends FlatSpec
     doReturn(Future(1)).when(eventDao).insert(any[Event])
     And("menu insertion is successful")
     doReturn(Future(1)).when(menuViewDao).upsert(any[MenuView])
-    And("menu insertion is successful")
+    And("menu does not exist")
+    doReturn(Future(None)).when(menuViewDao).findByUuid(any[UUID])
 
     When("Register menu")
     val menu = Menu(
@@ -95,7 +96,7 @@ class AggregateTest extends FlatSpec
     doReturn(Future(1)).when(eventDao).insert(any[Event])
     And("menu update is successful")
     doReturn(Future(1)).when(menuViewDao).upsert(any[MenuView])
-    And("menu to edit already exists")
+    And("menu exists")
     val menuView = MenuView(
       uuid = uuid,
       name = Some("Rice Crispy"),
