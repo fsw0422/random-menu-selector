@@ -7,49 +7,42 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import slick.basic.DatabaseConfig
 import slick.jdbc.JdbcProfile
+import utils.GenericToolset
 
 import scala.concurrent.Future
 
 final case class UserView(
   uuid: UUID,
-  name: String,
-  email: String
+  name: Option[String],
+  email: Option[String]
 )
 
 object UserView {
 
-  implicit val jsonFormat = Json
-    .using[Json.WithDefaultValues]
-    .format[UserView]
+  implicit val jsonFormat = Json.format[UserView]
 }
 
 @Singleton
-class UserViewHandler @Inject()(userViewDao: UserViewDao) {
+class UserViewHandler @Inject()(
+  genericToolset: GenericToolset,
+  userViewDao: UserViewDao
+) {
 
-  def create(user: User): IO[Int] = {
-    user.uuid.fold(IO.pure(0)) { userUuid =>
-      val newMenuView = UserView(
-        uuid = userUuid,
-        email = user.email.getOrElse(""),
-        name = user.name.getOrElse("")
+  def createOrUpdate(user: User): IO[Int] = {
+    val newUserView = user.uuid.fold {
+      UserView(
+        uuid = genericToolset.randomUUID(),
+        email = user.email,
+        name = user.name
       )
-      IO.fromFuture(IO(userViewDao.upsert(newMenuView)))
+    } { userUuid =>
+      UserView(
+        uuid = userUuid,
+        email = user.email,
+        name = user.name
+      )
     }
-  }
-
-  def update(user: User): IO[Int] = {
-    user.uuid.fold(IO.pure(0)) { userUuid =>
-      IO.fromFuture(IO(userViewDao.findByUuid(userUuid))).map { userViews =>
-        userViews.headOption.fold(0) { userView =>
-          val newUserView = userView.copy(
-            uuid = userUuid,
-            name = user.name.getOrElse(userView.name),
-            email = user.email.getOrElse(userView.email)
-          )
-          IO.fromFuture(IO(userViewDao.upsert(newUserView))).unsafeRunSync()
-        }
-      }
-    }
+    IO.fromFuture(IO(userViewDao.upsert(newUserView)))
   }
 
   def delete(uuid: UUID): IO[Int] = {
@@ -73,7 +66,7 @@ class UserViewDao {
     def email = column[String]("email")
 
     def * =
-      (uuid, name, email) <> ((UserView.apply _).tupled, UserView.unapply)
+      (uuid, name.?, email.?) <> ((UserView.apply _).tupled, UserView.unapply)
   }
 
   private lazy val viewTable = TableQuery[UserViewTable]

@@ -36,9 +36,7 @@ object User {
 
   val aggregateName = "USER"
 
-  implicit val jsonFormat = Json
-    .using[Json.WithDefaultValues]
-    .format[User]
+  implicit val jsonFormat = Json.format[User]
 }
 
 @Singleton
@@ -59,15 +57,15 @@ class Aggregate @Inject()(
       } { user =>
         val newUser = user.copy(uuid = Some(genericToolset.randomUUID()))
         val event = Event(
-          uuid = Some(genericToolset.randomUUID()),
-          `type` = EventType.USER_CREATED,
-          aggregate = User.aggregateName,
-          data = Json.toJson(newUser),
-          timestamp = genericToolset.currentTime()
+          uuid = genericToolset.randomUUID(),
+          `type` = Some(EventType.USER_CREATED),
+          aggregate = Some(User.aggregateName),
+          data = Some(Json.toJson(newUser)),
+          timestamp = Some(genericToolset.currentTime())
         )
         for {
           eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
-          viewResult <- userViewHandler.create(newUser)
+          viewResult <- userViewHandler.createOrUpdate(newUser)
         } yield {
           (eventResult, viewResult) match {
             case (1, 1) =>
@@ -90,15 +88,15 @@ class Aggregate @Inject()(
         result
       } { user =>
         val event = Event(
-          uuid = Some(genericToolset.randomUUID()),
-          `type` = EventType.MENU_UPDATED,
-          aggregate = User.aggregateName,
-          data = Json.toJson(user),
-          timestamp = genericToolset.currentTime()
+          uuid = genericToolset.randomUUID(),
+          `type` = Some(EventType.MENU_UPDATED),
+          aggregate = Some(User.aggregateName),
+          data = Some(Json.toJson(user)),
+          timestamp = Some(genericToolset.currentTime())
         )
         for {
           eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
-          viewResult <- userViewHandler.update(user)
+          viewResult <- userViewHandler.createOrUpdate(user)
         } yield {
           (eventResult, viewResult) match {
             case (1, 1) =>
@@ -111,27 +109,32 @@ class Aggregate @Inject()(
     }
   }
 
-  def remove(uuidOpt: Option[UUID]): IO[Either[String, String]] = {
-    uuidOpt.fold {
+  def remove(userOpt: Option[User]): IO[Either[String, String]] = {
+    userOpt.fold {
       val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_ERROR))
       result
-    } { userUuid =>
-      val event = Event(
-        uuid = Some(genericToolset.randomUUID()),
-        `type` = EventType.MENU_DELETED,
-        aggregate = User.aggregateName,
-        data = Json.toJson(userUuid),
-        timestamp = genericToolset.currentTime()
-      )
-      for {
-        eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
-        viewResult <- userViewHandler.delete(userUuid)
-      } yield {
-        (eventResult, viewResult) match {
-          case (1, 1) =>
-            Right(ResponseMessage.SUCCESS)
-          case _ =>
-            Left(ResponseMessage.FAILED)
+    } { user =>
+      user.uuid.fold {
+        val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_MISSING))
+        result
+      } { userUuid =>
+        val event = Event(
+          uuid = genericToolset.randomUUID(),
+          `type` = Some(EventType.MENU_DELETED),
+          aggregate = Some(User.aggregateName),
+          data = Some(Json.toJson(userUuid)),
+          timestamp = Some(genericToolset.currentTime())
+        )
+        for {
+          eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
+          viewResult <- userViewHandler.delete(userUuid)
+        } yield {
+          (eventResult, viewResult) match {
+            case (1, 1) =>
+              Right(ResponseMessage.SUCCESS)
+            case _ =>
+              Left(ResponseMessage.FAILED)
+          }
         }
       }
     }
