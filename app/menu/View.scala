@@ -28,7 +28,7 @@ object MenuView {
 }
 
 @Singleton
-class ViewHandler @Inject()(
+class MenuViewHandler @Inject()(
   config: Config,
   genericToolset: GenericToolset,
   emailSender: EmailSender,

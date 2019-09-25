@@ -3,7 +3,7 @@ package user
 import java.util.UUID
 
 import cats.effect.IO
-import event.{Event, EventDao, EventType}
+import event.{Event, EventHandler, EventType}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import utils.{GenericToolset, ResponseMessage}
@@ -42,7 +42,7 @@ object User {
 @Singleton
 class Aggregate @Inject()(
   genericToolset: GenericToolset,
-  eventDao: EventDao,
+  eventHandler: EventHandler,
   userViewHandler: UserViewHandler
 ) {
 
@@ -64,7 +64,7 @@ class Aggregate @Inject()(
           timestamp = Some(genericToolset.currentTime())
         )
         for {
-          eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
+          eventResult <- eventHandler.insert(event)
           viewResult <- userViewHandler.createOrUpdate(newUser)
         } yield {
           (eventResult, viewResult) match {
@@ -95,7 +95,7 @@ class Aggregate @Inject()(
           timestamp = Some(genericToolset.currentTime())
         )
         for {
-          eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
+          eventResult <- eventHandler.insert(event)
           viewResult <- userViewHandler.createOrUpdate(user)
         } yield {
           (eventResult, viewResult) match {
@@ -126,7 +126,7 @@ class Aggregate @Inject()(
           timestamp = Some(genericToolset.currentTime())
         )
         for {
-          eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
+          eventResult <- eventHandler.insert(event)
           viewResult <- userViewHandler.delete(userUuid)
         } yield {
           (eventResult, viewResult) match {

@@ -2,8 +2,9 @@ package event
 
 import java.util.UUID
 
+import cats.effect.IO
 import event.EventType.EventType
-import javax.inject.Singleton
+import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime
 import play.api.libs.json.JsValue
 import slick.basic.DatabaseConfig
@@ -27,6 +28,18 @@ final case class Event(
   aggregate: Option[String],
   data: Option[JsValue]
 )
+
+@Singleton
+class EventHandler @Inject()(eventDao: EventDao) {
+
+  def insert(event: Event): IO[Int] = {
+    IO.fromFuture(IO(eventDao.insert(event)))
+  }
+
+  def findByTypeAndDataUuidSortedByTimestamp(`types`: Set[EventType], uuid: UUID): IO[Seq[Event]] = {
+    IO.fromFuture(IO(eventDao.findByTypeAndDataUuidSortedByTimestamp(`types`, uuid)))
+  }
+}
 
 @Singleton
 class EventDao {
