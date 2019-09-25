@@ -4,7 +4,7 @@ import java.util.{Properties, UUID}
 
 import com.typesafe.config.{Config, ConfigFactory}
 import event.EventType.EventType
-import event.{Event, EventDao, EventType}
+import event.{Event, EventDao, EventHandler, EventType}
 import javax.mail.internet.InternetAddress
 import javax.mail.{Address, Message, Session, Transport}
 import org.joda.time.DateTime
@@ -52,9 +52,10 @@ class AggregateTest extends FlatSpec
     val emailSender: EmailSender = new EmailSender(session, transport)
     // In real CQRS, reaching the view handler will be a network boundary cross,
     // but as of now, since it's composed by a single IO monad, it is tested as a whole
-    val viewHandler: ViewHandler = new ViewHandler(config, genericToolset, emailSender, menuViewDao, userViewDao)
+    val eventHandler: EventHandler = new EventHandler(eventDao)
+    val menuViewHandler: MenuViewHandler = new MenuViewHandler(config, genericToolset, emailSender, menuViewDao, userViewDao)
 
-    aggregate = new Aggregate(config, genericToolset, eventDao, viewHandler)
+    aggregate = new Aggregate(config, genericToolset, eventHandler, menuViewHandler)
   }
 
   behavior of "register"

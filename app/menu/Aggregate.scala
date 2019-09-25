@@ -4,12 +4,10 @@ import java.util.UUID
 
 import cats.effect.IO
 import com.typesafe.config.Config
-import event.{Event, EventDao, EventType}
+import event.{Event, EventHandler, EventType}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import utils.{GenericToolset, ResponseMessage}
-
-import scala.concurrent.Future
 
 final case class Menu(
   uuid: Option[UUID],
@@ -51,8 +49,8 @@ object Menu {
 class Aggregate @Inject()(
   config: Config,
   genericToolset: GenericToolset,
-  eventDao: EventDao,
-  viewHandler: ViewHandler
+  eventHandler: EventHandler,
+  menuViewHandler: MenuViewHandler
 ) {
 
   def register(menuOpt: Option[Menu]): IO[Either[String, String]] = {
@@ -74,8 +72,8 @@ class Aggregate @Inject()(
             timestamp = Some(genericToolset.currentTime())
           )
           for {
-            eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
-            viewResult <- viewHandler.createOrUpdate(newMenu)
+            eventResult <- eventHandler.insert(event)
+            viewResult <- menuViewHandler.createOrUpdate(newMenu)
           } yield {
             (eventResult, viewResult) match {
               case (1, 1) =>
@@ -107,8 +105,8 @@ class Aggregate @Inject()(
             timestamp = Some(genericToolset.currentTime())
           )
           for {
-            eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
-            viewResult <- viewHandler.createOrUpdate(menu)
+            eventResult <- eventHandler.insert(event)
+            viewResult <- menuViewHandler.createOrUpdate(menu)
           } yield {
             (eventResult, viewResult) match {
               case (1, 1) =>
@@ -140,8 +138,8 @@ class Aggregate @Inject()(
             timestamp = Some(genericToolset.currentTime())
           )
           for {
-            eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
-            viewResult <- viewHandler.delete(menuUuid)
+            eventResult <- eventHandler.insert(event)
+            viewResult <- menuViewHandler.delete(menuUuid)
           } yield {
             (eventResult, viewResult) match {
               case (1, 1) =>
@@ -161,7 +159,7 @@ class Aggregate @Inject()(
       result
     } { selectedUuid =>
       for {
-        latestSelectedMenuEvents <- IO.fromFuture(IO(getLatestSelectedMenuEvents(selectedUuid)))
+        latestSelectedMenuEvents <- getLatestSelectedMenuEvents(selectedUuid)
         emptyMenu = Menu(
           uuid = Some(selectedUuid),
           name = None,
@@ -184,9 +182,9 @@ class Aggregate @Inject()(
           data = Some(Json.toJson(newMenu)),
           timestamp = Some(genericToolset.currentTime())
         )
-        eventResult <- IO.fromFuture(IO(eventDao.insert(event)))
-        viewResult <- viewHandler.createOrUpdate(newMenu)
-        _ <- viewHandler.sendMenuToAllUsers(selectedUuid)
+        eventResult <- eventHandler.insert(event)
+        viewResult <- menuViewHandler.createOrUpdate(newMenu)
+        _ <- menuViewHandler.sendMenuToAllUsers(selectedUuid)
       } yield {
         (eventResult, viewResult) match {
           case (1, 1) =>
@@ -198,8 +196,8 @@ class Aggregate @Inject()(
     }
   }
 
-  private def getLatestSelectedMenuEvents(uuid: UUID): Future[Seq[Event]] = {
-    eventDao.findByTypeAndDataUuidSortedByTimestamp(Set(EventType.MENU_SELECTED), uuid)
+  private def getLatestSelectedMenuEvents(uuid: UUID): IO[Seq[Event]] = {
+    eventHandler.findByTypeAndDataUuidSortedByTimestamp(Set(EventType.MENU_SELECTED), uuid)
   }
 
   private def authenticate[R](menu: Menu, password: String = config.getString("write.password"))
