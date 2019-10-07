@@ -6,6 +6,7 @@ import cats.effect.IO
 import event.{Event, EventHandler, EventType}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
+import utils.ResponseMessage._
 import utils.{GenericToolset, ResponseMessage}
 
 final case class User(
@@ -47,14 +48,8 @@ class Aggregate @Inject()(
 ) {
 
   def signUp(userOpt: Option[User]): IO[Either[String, String]] = {
-    userOpt.fold {
-      val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_ERROR))
-      result
-    } { user =>
-      user.validateRegisterParams {
-        val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_MISSING))
-        result
-      } { user =>
+    userOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { user =>
+      user.validateRegisterParams(returnError[String](ResponseMessage.PARAM_MISSING)) { user =>
         val newUser = user.copy(uuid = Some(genericToolset.randomUUID()))
         val event = Event(
           uuid = genericToolset.randomUUID(),
@@ -79,14 +74,8 @@ class Aggregate @Inject()(
   }
 
   def edit(userOpt: Option[User]): IO[Either[String, String]] = {
-    userOpt.fold {
-      val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_ERROR))
-      result
-    } { user =>
-      user.validateEditParams {
-        val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_MISSING))
-        result
-      } { user =>
+    userOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { user =>
+      user.validateEditParams(returnError[String](ResponseMessage.PARAM_MISSING)) { user =>
         val event = Event(
           uuid = genericToolset.randomUUID(),
           `type` = Some(EventType.MENU_UPDATED),
@@ -110,14 +99,8 @@ class Aggregate @Inject()(
   }
 
   def remove(userOpt: Option[User]): IO[Either[String, String]] = {
-    userOpt.fold {
-      val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_ERROR))
-      result
-    } { user =>
-      user.uuid.fold {
-        val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_MISSING))
-        result
-      } { userUuid =>
+    userOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { user =>
+      user.uuid.fold(returnError[String](ResponseMessage.PARAM_MISSING)) { userUuid =>
         val event = Event(
           uuid = genericToolset.randomUUID(),
           `type` = Some(EventType.MENU_DELETED),

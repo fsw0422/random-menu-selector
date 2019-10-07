@@ -1,5 +1,7 @@
 package utils
 
+import cats.effect.IO
+
 object ResponseMessage {
   val FAILED = "FAILED"
   val INCORRECT_SCHEMA_VERSION = "INCORRECT_SCHEMA_VERSION"
@@ -9,4 +11,6 @@ object ResponseMessage {
   val PARAM_MISSING = "PARAM_MISSING"
   val SUCCESS = "SUCCESS"
   val UNAUTHORIZED = "ACCESS DENIED"
+
+  def returnError[R](errorMessage: String): IO[Either[String, R]] = IO.pure(Left(errorMessage))
 }

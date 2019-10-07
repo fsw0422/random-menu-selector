@@ -7,6 +7,7 @@ import com.typesafe.config.Config
 import event.{Event, EventHandler, EventType}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
+import utils.ResponseMessage._
 import utils.{GenericToolset, ResponseMessage}
 
 final case class Menu(
@@ -54,15 +55,9 @@ class Aggregate @Inject()(
 ) {
 
   def register(menuOpt: Option[Menu]): IO[Either[String, String]] = {
-    menuOpt.fold {
-      val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_ERROR))
-      result
-    } { menu =>
+    menuOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { menu =>
       authenticate(menu) { menu =>
-        menu.validateRegisterParams {
-          val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_MISSING))
-          result
-        } { menu =>
+        menu.validateRegisterParams(returnError[String](ResponseMessage.PARAM_MISSING)) { menu =>
           val newMenu = menu.copy(uuid = Some(genericToolset.randomUUID()), selectedCount = Some(0))
           val event = Event(
             uuid = genericToolset.randomUUID(),
@@ -88,15 +83,9 @@ class Aggregate @Inject()(
   }
 
   def edit(menuOpt: Option[Menu]): IO[Either[String, String]] = {
-    menuOpt.fold {
-      val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_ERROR))
-      result
-    } { menu =>
+    menuOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { menu =>
       authenticate(menu) { menu =>
-        menu.validateEditParams {
-          val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_MISSING))
-          result
-        } { menu =>
+        menu.validateEditParams(returnError[String](ResponseMessage.PARAM_MISSING)) { menu =>
           val event = Event(
             uuid = genericToolset.randomUUID(),
             `type` = Some(EventType.MENU_UPDATED),
@@ -121,15 +110,9 @@ class Aggregate @Inject()(
   }
 
   def remove(menuOpt: Option[Menu]): IO[Either[String, String]] = {
-    menuOpt.fold {
-      val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_ERROR))
-      result
-    } { menu =>
+    menuOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { menu =>
       authenticate(menu) { menu =>
-        menu.uuid.fold {
-          val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_MISSING))
-          result
-        } { menuUuid =>
+        menu.uuid.fold(returnError[String](ResponseMessage.PARAM_MISSING)) { menuUuid =>
           val event = Event(
             uuid = genericToolset.randomUUID(),
             `type` = Some(EventType.MENU_DELETED),
@@ -154,10 +137,7 @@ class Aggregate @Inject()(
   }
 
   def selectMenu(uuidOpt: Option[UUID]): IO[Either[String, String]] = {
-    uuidOpt.fold {
-      val result: IO[Either[String, String]] = IO.pure(Left(ResponseMessage.PARAM_ERROR))
-      result
-    } { selectedUuid =>
+    uuidOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { selectedUuid =>
       for {
         latestSelectedMenuEvents <- getLatestSelectedMenuEvents(selectedUuid)
         emptyMenu = Menu(
@@ -202,16 +182,11 @@ class Aggregate @Inject()(
 
   private def authenticate[R](menu: Menu, password: String = config.getString("write.password"))
   (accessGranted: Menu => IO[Either[String, R]]): IO[Either[String, R]] = {
-    menu.passwordAttempt.fold {
-      val result: IO[Either[String, R]] = IO.pure(Left(ResponseMessage.UNAUTHORIZED))
-      result
-    } { pa =>
-      if (pa != password) {
-        val result: IO[Either[String, R]] = IO.pure(Left(ResponseMessage.UNAUTHORIZED))
-        result
-      } else {
+    menu.passwordAttempt.fold(returnError[R](ResponseMessage.UNAUTHORIZED)) {
+      case `password` =>
         accessGranted(menu)
-      }
+      case _ =>
+        returnError[R](ResponseMessage.UNAUTHORIZED)
     }
   }
 }
