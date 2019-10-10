@@ -1,7 +1,5 @@
 package user
 
-import java.util.UUID
-
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{AbstractController, Action, ControllerComponents}

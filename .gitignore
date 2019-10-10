@@ -1,5 +1,6 @@
 logs
 target
+venv
 /.idea
 /.idea_modules
 /.classpath

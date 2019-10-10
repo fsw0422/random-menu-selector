@@ -1,7 +1,5 @@
 package menu
 
-import java.util.UUID
-
 import cats.effect.IO
 import org.junit.runner.RunWith
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
