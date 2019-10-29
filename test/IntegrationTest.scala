@@ -1,7 +1,6 @@
-package menu
-
 import java.util.UUID
 
+import menu.MenuViewDao
 import org.junit.runner.RunWith
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.junit.JUnitRunner

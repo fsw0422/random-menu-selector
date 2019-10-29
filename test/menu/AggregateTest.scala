@@ -14,7 +14,7 @@ import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, GivenWhenThen, Matchers}
 import play.api.libs.json.Json
 import user.{UserView, UserViewDao}
-import utils.{EmailSender, GenericToolset, ResponseMessage}
+import utils.{EmailSender, ResponseMessage}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -43,19 +43,15 @@ class AggregateTest extends FlatSpec
 
     val config: Config = ConfigFactory.load("application.conf")
 
-    val genericToolset: GenericToolset = mock[GenericToolset]
-    doReturn(uuid).when(genericToolset).randomUUID()
-    doReturn(dateTime).when(genericToolset).currentTime()
-
     transport = mock[Transport]
     val session: Session = Session.getInstance(new Properties())
     val emailSender: EmailSender = new EmailSender(session, transport)
     // In real CQRS, reaching the view handler will be a network boundary cross,
     // but as of now, since it's composed by a single IO monad, it is tested as a whole
     val eventHandler: EventHandler = new EventHandler(eventDao)
-    val menuViewHandler: MenuViewHandler = new MenuViewHandler(config, genericToolset, emailSender, menuViewDao, userViewDao)
+    val menuViewHandler: MenuViewHandler = new MenuViewHandler(config, emailSender, menuViewDao, userViewDao)
 
-    aggregate = new Aggregate(config, genericToolset, eventHandler, menuViewHandler)
+    aggregate = new Aggregate(config, eventHandler, menuViewHandler)
   }
 
   behavior of "register"
@@ -69,7 +65,6 @@ class AggregateTest extends FlatSpec
 
     When("Register menu")
     val menu = Menu(
-      uuid = None,
       name = Some("Rice Crispy"),
       ingredients = Some(Seq("ketchup", "mayo")),
       recipe = Some("blahblahblah"),
@@ -99,7 +94,6 @@ class AggregateTest extends FlatSpec
     doReturn(Future(1)).when(menuViewDao).upsert(any[MenuView])
     And("menu exists")
     val menuView = MenuView(
-      uuid = uuid,
       name = Some("Rice Crispy"),
       ingredients = Some(Seq("ketchup", "mayo")),
       recipe = Some("blahblahblah"),
@@ -110,7 +104,6 @@ class AggregateTest extends FlatSpec
 
     When("Edit menu")
     val menu = Menu(
-      uuid = Some(uuid),
       name = Some("Rice Dipspy"),
       ingredients = Some(Seq("fart", "toenail")),
       recipe = Some("dunno"),
@@ -141,7 +134,6 @@ class AggregateTest extends FlatSpec
 
     When("Remove menu")
     val menu = Menu(
-      uuid = Some(uuid),
       name = None,
       ingredients = None,
       recipe = None,
@@ -157,15 +149,12 @@ class AggregateTest extends FlatSpec
     val eventCaptor: ArgumentCaptor[Event] = ArgumentCaptor.forClass(classOf[Event])
     verify(eventDao, times(1)).insert(eventCaptor.capture())
     val eventArg = eventCaptor.getValue
-    eventArg.uuid should equal(uuid)
     eventArg.`type`.get should equal(EventType.MENU_DELETED)
     eventArg.aggregate.get should equal(Menu.aggregateName)
-    eventArg.timestamp.get should equal(dateTime)
-    (eventArg.data.get \ "uuid").as[String] should equal(uuid.toString)
     And("menu delete is called once")
     val uuidCaptor: ArgumentCaptor[UUID] = ArgumentCaptor.forClass(classOf[UUID])
     verify(menuViewDao, times(1)).delete(uuidCaptor.capture())
-    uuidCaptor.getValue should equal(uuid)
+    uuidCaptor.getValue should equal(menu.uuid.get)
   }
 
   behavior of "selectMenu"
@@ -176,7 +165,6 @@ class AggregateTest extends FlatSpec
     doReturn(Future(1)).when(menuViewDao).upsert(any[MenuView])
     And("select menu event exists")
     val menu = Menu(
-      uuid = Some(uuid),
       name = None,
       ingredients = None,
       recipe = None,
@@ -185,7 +173,6 @@ class AggregateTest extends FlatSpec
       passwordAttempt = Some("fake")
     )
     val event = Event(
-      uuid = uuid,
       `type` = Some(EventType.MENU_SELECTED),
       aggregate = Some(Menu.aggregateName),
       data = Some(Json.toJson(menu)),
@@ -194,7 +181,6 @@ class AggregateTest extends FlatSpec
     doReturn(Future(Seq(event))).when(eventDao).findByTypeAndDataUuidSortedByTimestamp(any[Set[EventType]], any[UUID])
     And("menu to edit already exists")
     val menuView = MenuView(
-      uuid = uuid,
       name = Some("Rice Crispy"),
       ingredients = Some(Seq("ketchup", "mayo")),
       recipe = Some("blahblahblah"),
@@ -204,7 +190,6 @@ class AggregateTest extends FlatSpec
     doReturn(Future(Option(menuView))).when(menuViewDao).findByUuid(any[UUID])
     And("users to send already exists")
     val userView = UserView(
-      uuid = uuid,
       name = Some("me"),
       email = Some("asdf@me.com")
     )
@@ -220,17 +205,13 @@ class AggregateTest extends FlatSpec
     val eventCaptor: ArgumentCaptor[Event] = ArgumentCaptor.forClass(classOf[Event])
     verify(eventDao, times(1)).insert(eventCaptor.capture())
     val eventArg = eventCaptor.getValue
-    eventArg.uuid should equal(uuid)
     eventArg.`type`.get should equal(EventType.MENU_SELECTED)
     eventArg.aggregate.get should equal(Menu.aggregateName)
-    eventArg.timestamp.get should equal(dateTime)
-    (eventArg.data.get \ "uuid").as[String] should equal(menu.uuid.get.toString)
     (eventArg.data.get \ "selectedCount").as[Int] should equal(menu.selectedCount.get + 1)
     And("menu update is called once")
     val menuViewCaptor: ArgumentCaptor[MenuView] = ArgumentCaptor.forClass(classOf[MenuView])
     verify(menuViewDao, times(1)).upsert(menuViewCaptor.capture())
     val menuViewArg = menuViewCaptor.getValue
-    menuViewArg.uuid should equal(menu.uuid.get)
     menuViewArg.selectedCount.get should equal(menu.selectedCount.get + 1)
     And("send email is called once")
     val messageCaptor: ArgumentCaptor[Message] = ArgumentCaptor.forClass(classOf[Message])
@@ -245,11 +226,8 @@ class AggregateTest extends FlatSpec
   }
 
   private def assertMenuEvent(eventArg: Event, menuEventType: EventType, menu: Menu): Unit = {
-    eventArg.uuid should equal(uuid)
     eventArg.`type`.get should equal(menuEventType)
     eventArg.aggregate.get should equal(Menu.aggregateName)
-    eventArg.timestamp.get should equal(dateTime)
-    (eventArg.data.get \ "uuid").as[String] should equal(uuid.toString)
     (eventArg.data.get \ "name").as[String] should equal(menu.name.get)
     (eventArg.data.get \ "recipe").as[String] should equal(menu.recipe.get)
     (eventArg.data.get \ "ingredients").as[Seq[String]].zip(menu.ingredients.get).foreach {

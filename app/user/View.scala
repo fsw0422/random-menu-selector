@@ -7,12 +7,11 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import slick.basic.DatabaseConfig
 import slick.jdbc.JdbcProfile
-import utils.GenericToolset
 
 import scala.concurrent.Future
 
 final case class UserView(
-  uuid: UUID,
+  uuid: Option[UUID] = Some(UUID.randomUUID()),
   name: Option[String],
   email: Option[String]
 )
@@ -23,10 +22,7 @@ object UserView {
 }
 
 @Singleton
-class UserViewHandler @Inject()(
-  genericToolset: GenericToolset,
-  userViewDao: UserViewDao
-) {
+class UserViewHandler @Inject()(userViewDao: UserViewDao) {
 
   def createOrUpdate(user: User): IO[Int] = {
     user.uuid.fold(IO.pure(0)) { userUuid =>
@@ -34,7 +30,6 @@ class UserViewHandler @Inject()(
         userViewOpt <- IO.fromFuture(IO(userViewDao.findByUuid(userUuid)))
         newUserView = userViewOpt.fold {
           UserView(
-            uuid = genericToolset.randomUUID(),
             email = user.email,
             name = user.name
           )
@@ -65,12 +60,12 @@ class UserViewDao {
 
   class UserViewTable(tag: Tag) extends Table[UserView](tag, "user_view") {
 
-    def uuid = column[UUID]("uuid", O.PrimaryKey)
+    def uuid = column[UUID]("uuid")
     def name = column[String]("name")
     def email = column[String]("email")
 
     def * =
-      (uuid, name.?, email.?) <> ((UserView.apply _).tupled, UserView.unapply)
+      (uuid.?, name.?, email.?) <> ((UserView.apply _).tupled, UserView.unapply)
   }
 
   private lazy val viewTable = TableQuery[UserViewTable]
@@ -78,7 +73,13 @@ class UserViewDao {
   private lazy val db = DatabaseConfig.forConfig[JdbcProfile]("postgres").db
 
   def upsert(userView: UserView): Future[Int] = db.run {
-    viewTable.insertOrUpdate(userView)
+    userView.uuid.fold {
+      viewTable
+        .map(t => (t.name.?, t.email.?))
+        .insertOrUpdate((userView.name, userView.email))
+    } { uuid =>
+      viewTable.insertOrUpdate(userView)
+    }
   }
 
   def findByUuid(uuid: UUID): Future[Option[UserView]] = db.run {
