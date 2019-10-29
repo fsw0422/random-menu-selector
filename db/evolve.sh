@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 liquibase \
-  --classpath=db/postgresql-42.1.4.jar \
+  --classpath=${HOME}/.ivy2/cache/org.postgresql/postgresql/bundles/postgresql-42.2.5.jar \
   --driver=org.postgresql.Driver \
   --changeLogFile=db/changelog.xml \
   --url=jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB} \
