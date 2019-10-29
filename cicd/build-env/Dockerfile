@@ -6,6 +6,8 @@ ENV LC_ALL=C.UTF-8
 RUN echo "Installing Dependencies" \
   && apt update \
   && apt install -y \
+  	wget \
+  	unzip \
     curl \
 		apt-transport-https \
 		ca-certificates \
@@ -30,18 +32,17 @@ RUN echo "Installing Dependencies" \
   && curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose \
   && chmod +x /usr/local/bin/docker-compose
 
-# Dependencies
-RUN apt install -y libpq-dev python-dev \
-  && pip3 install \
-		SQLAlchemy==1.3.10 \
-		psycopg2==2.8.4 \
-		testcontainers==2.5
+# Install Liquibase
+RUN wget https://github.com/liquibase/liquibase/releases/download/liquibase-parent-3.8.0/liquibase-3.8.0-bin.zip -O /opt/liquibase.zip \
+	&& unzip /opt/liquibase.zip -d /opt/liquibase \
+	&& chmod +x /opt/liquibase/liquibase \
+	&& ln -s /opt/liquibase/liquibase /usr/local/bin
 
 # Add custom user and group id (For Linux users)
 ARG USER_NAME
 ARG USER_ID
 ARG GROUP_ID
-RUN if [ -n ${USER_NAME} ] && [ ${USER_ID:-1} -ne 0 ] && [ ${GROUP_ID:-1} -ne 0 ]; then \
+RUN if [ ! -z ${USER_NAME} ] && [ ! -z ${USER_ID} ] && [ ! -z ${GROUP_ID} ]; then \
 	groupadd -g ${GROUP_ID} ${USER_NAME} \
 	&& useradd -l -u ${USER_ID} -g ${USER_NAME} ${USER_NAME} \
 	&& install -d -m 0755 -o ${USER_NAME} -g ${USER_NAME} /home/${USER_NAME} \
