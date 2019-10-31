@@ -58,14 +58,13 @@ class EventDao {
    * It is not the same thing as the object definition
    */
   class EventTable(tag: Tag) extends Table[Event](tag, "event") {
-    def uuid = column[UUID]("uuid", O.PrimaryKey)
+    def uuid = column[UUID]("uuid")
     def timestamp = column[DateTime]("timestamp")
     def `type` = column[EventType]("type")
     def aggregate = column[String]("aggregate")
     def data = column[JsValue]("data")
 
     def * =
-      // map the column definition to object definition by lifting column types to object type
       (uuid.?, timestamp.?, `type`.?, aggregate.?, data.?) <> ((Event.apply _).tupled, Event.unapply)
   }
 
