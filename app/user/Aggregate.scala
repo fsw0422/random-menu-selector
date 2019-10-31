@@ -6,11 +6,11 @@ import cats.effect.IO
 import event.{Event, EventHandler, EventType}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
+import utils.ResponseMessage
 import utils.ResponseMessage._
-import utils.{GenericToolset, ResponseMessage}
 
 final case class User(
-  uuid: Option[UUID],
+  uuid: Option[UUID] = Some(UUID.randomUUID()),
   name: Option[String],
   email: Option[String]
 ) {
@@ -42,7 +42,6 @@ object User {
 
 @Singleton
 class Aggregate @Inject()(
-  genericToolset: GenericToolset,
   eventHandler: EventHandler,
   userViewHandler: UserViewHandler
 ) {
@@ -50,17 +49,14 @@ class Aggregate @Inject()(
   def signUp(userOpt: Option[User]): IO[Either[String, String]] = {
     userOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { user =>
       user.validateRegisterParams(returnError[String](ResponseMessage.PARAM_MISSING)) { user =>
-        val newUser = user.copy(uuid = Some(genericToolset.randomUUID()))
         val event = Event(
-          uuid = genericToolset.randomUUID(),
           `type` = Some(EventType.USER_CREATED),
           aggregate = Some(User.aggregateName),
-          data = Some(Json.toJson(newUser)),
-          timestamp = Some(genericToolset.currentTime())
+          data = Some(Json.toJson(user)),
         )
         for {
           eventResult <- eventHandler.insert(event)
-          viewResult <- userViewHandler.createOrUpdate(newUser)
+          viewResult <- userViewHandler.createOrUpdate(user)
         } yield {
           (eventResult, viewResult) match {
             case (1, 1) =>
@@ -77,11 +73,9 @@ class Aggregate @Inject()(
     userOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { user =>
       user.validateEditParams(returnError[String](ResponseMessage.PARAM_MISSING)) { user =>
         val event = Event(
-          uuid = genericToolset.randomUUID(),
           `type` = Some(EventType.MENU_UPDATED),
           aggregate = Some(User.aggregateName),
-          data = Some(Json.toJson(user)),
-          timestamp = Some(genericToolset.currentTime())
+          data = Some(Json.toJson(user))
         )
         for {
           eventResult <- eventHandler.insert(event)
@@ -102,11 +96,9 @@ class Aggregate @Inject()(
     userOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { user =>
       user.uuid.fold(returnError[String](ResponseMessage.PARAM_MISSING)) { userUuid =>
         val event = Event(
-          uuid = genericToolset.randomUUID(),
           `type` = Some(EventType.MENU_DELETED),
           aggregate = Some(User.aggregateName),
-          data = Some(Json.toJson(userUuid)),
-          timestamp = Some(genericToolset.currentTime())
+          data = Some(Json.toJson(userUuid))
         )
         for {
           eventResult <- eventHandler.insert(event)

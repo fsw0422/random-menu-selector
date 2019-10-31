@@ -22,8 +22,8 @@ object EventType extends Enumeration {
 }
 
 final case class Event(
-  uuid: UUID,
-  timestamp: Option[DateTime],
+  uuid: Option[UUID] = Some(UUID.randomUUID()),
+  timestamp: Option[DateTime] = Some(DateTime.now()),
   `type`: Option[EventType],
   aggregate: Option[String],
   data: Option[JsValue]
@@ -53,15 +53,20 @@ class EventDao {
       str => EventType.withName(str)
     )
 
+  /*
+   * Table definition is defined in the Database itself (see db/changelog.xml)
+   * It is not the same thing as the object definition
+   */
   class EventTable(tag: Tag) extends Table[Event](tag, "event") {
     def uuid = column[UUID]("uuid", O.PrimaryKey)
     def timestamp = column[DateTime]("timestamp")
     def `type` = column[EventType]("type")
-    def version = column[String]("aggregate")
+    def aggregate = column[String]("aggregate")
     def data = column[JsValue]("data")
 
     def * =
-      (uuid, timestamp.?, `type`.?, version.?, data.?) <> ((Event.apply _).tupled, Event.unapply)
+      // map the column definition to object definition by lifting column types to object type
+      (uuid.?, timestamp.?, `type`.?, aggregate.?, data.?) <> ((Event.apply _).tupled, Event.unapply)
   }
 
   private lazy val eventTable = TableQuery[EventTable]
@@ -69,7 +74,7 @@ class EventDao {
   private lazy val db = DatabaseConfig.forConfig[JdbcProfile]("postgres").db
 
   def insert(event: Event): Future[Int] = db.run {
-    eventTable += event
+    eventTable.map(t => (t.`type`.?, t.aggregate.?, t.data.?)) += ((event.`type`, event.aggregate, event.data))
   }
 
   def findByTypeAndDataUuidSortedByTimestamp(`types`: Set[EventType], uuid: UUID): Future[Seq[Event]] = db.run {

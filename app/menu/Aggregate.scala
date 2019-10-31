@@ -7,11 +7,11 @@ import com.typesafe.config.Config
 import event.{Event, EventHandler, EventType}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
+import utils.ResponseMessage
 import utils.ResponseMessage._
-import utils.{GenericToolset, ResponseMessage}
 
 final case class Menu(
-  uuid: Option[UUID],
+  uuid: Option[UUID] = Some(UUID.randomUUID()),
   name: Option[String],
   ingredients: Option[Seq[String]],
   recipe: Option[String],
@@ -49,7 +49,6 @@ object Menu {
 @Singleton
 class Aggregate @Inject()(
   config: Config,
-  genericToolset: GenericToolset,
   eventHandler: EventHandler,
   menuViewHandler: MenuViewHandler
 ) {
@@ -58,13 +57,11 @@ class Aggregate @Inject()(
     menuOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { menu =>
       authenticate(menu) { menu =>
         menu.validateRegisterParams(returnError[String](ResponseMessage.PARAM_MISSING)) { menu =>
-          val newMenu = menu.copy(uuid = Some(genericToolset.randomUUID()), selectedCount = Some(0))
+          val newMenu = menu.copy(selectedCount = Some(0))
           val event = Event(
-            uuid = genericToolset.randomUUID(),
             `type` = Some(EventType.MENU_CREATED),
             aggregate = Some(Menu.aggregateName),
-            data = Some(Json.toJson(newMenu)),
-            timestamp = Some(genericToolset.currentTime())
+            data = Some(Json.toJson(newMenu))
           )
           for {
             eventResult <- eventHandler.insert(event)
@@ -87,11 +84,9 @@ class Aggregate @Inject()(
       authenticate(menu) { menu =>
         menu.validateEditParams(returnError[String](ResponseMessage.PARAM_MISSING)) { menu =>
           val event = Event(
-            uuid = genericToolset.randomUUID(),
             `type` = Some(EventType.MENU_UPDATED),
             aggregate = Some(Menu.aggregateName),
-            data = Some(Json.toJson(menu)),
-            timestamp = Some(genericToolset.currentTime())
+            data = Some(Json.toJson(menu))
           )
           for {
             eventResult <- eventHandler.insert(event)
@@ -114,11 +109,9 @@ class Aggregate @Inject()(
       authenticate(menu) { menu =>
         menu.uuid.fold(returnError[String](ResponseMessage.PARAM_MISSING)) { menuUuid =>
           val event = Event(
-            uuid = genericToolset.randomUUID(),
             `type` = Some(EventType.MENU_DELETED),
             aggregate = Some(Menu.aggregateName),
-            data = Some(Json.obj("uuid" -> Json.toJson(menuUuid))),
-            timestamp = Some(genericToolset.currentTime())
+            data = Some(Json.obj("uuid" -> Json.toJson(menuUuid)))
           )
           for {
             eventResult <- eventHandler.insert(event)
@@ -156,11 +149,9 @@ class Aggregate @Inject()(
           }
         }
         event = Event(
-          uuid = genericToolset.randomUUID(),
           `type` = Some(EventType.MENU_SELECTED),
           aggregate = Some(Menu.aggregateName),
-          data = Some(Json.toJson(newMenu)),
-          timestamp = Some(genericToolset.currentTime())
+          data = Some(Json.toJson(newMenu))
         )
         eventResult <- eventHandler.insert(event)
         viewResult <- menuViewHandler.createOrUpdate(newMenu)

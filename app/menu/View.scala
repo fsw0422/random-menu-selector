@@ -9,12 +9,12 @@ import play.api.libs.json.Json
 import slick.basic.DatabaseConfig
 import slick.jdbc.JdbcProfile
 import user.{UserView, UserViewDao}
-import utils.{Email, EmailSender, GenericToolset}
+import utils.{Email, EmailSender}
 
 import scala.concurrent.Future
 
 final case class MenuView(
-  uuid: UUID,
+  uuid: Option[UUID] = Some(UUID.randomUUID()),
   name: Option[String],
   ingredients: Option[Seq[String]],
   recipe: Option[String],
@@ -30,7 +30,6 @@ object MenuView {
 @Singleton
 class MenuViewHandler @Inject()(
   config: Config,
-  genericToolset: GenericToolset,
   emailSender: EmailSender,
   menuViewDao: MenuViewDao,
   userViewDao: UserViewDao
@@ -45,7 +44,6 @@ class MenuViewHandler @Inject()(
         menuViewOpt <- IO.fromFuture(IO(menuViewDao.findByUuid(menuUuid)))
         newMenuView = menuViewOpt.fold {
           MenuView(
-            uuid = genericToolset.randomUUID(),
             name = menu.name,
             ingredients = menu.ingredients,
             recipe = menu.recipe,
@@ -136,7 +134,7 @@ class MenuViewDao {
   import utils.db.PostgresProfile.api._
 
   class MenuViewTable(tag: Tag) extends Table[MenuView](tag, "menu_view") {
-    def uuid = column[UUID]("uuid", O.PrimaryKey)
+    def uuid = column[UUID]("uuid")
     def name = column[String]("name")
     def ingredients = column[Seq[String]]("ingredients")
     def recipe = column[String]("recipe")
@@ -144,7 +142,7 @@ class MenuViewDao {
     def selectedCount = column[Int]("selected_count")
 
     def * =
-      (uuid, name.?, ingredients.?, recipe.?, link.?, selectedCount.?) <> ((MenuView.apply _).tupled, MenuView.unapply)
+      (uuid.?, name.?, ingredients.?, recipe.?, link.?, selectedCount.?) <> ((MenuView.apply _).tupled, MenuView.unapply)
   }
 
   private lazy val viewTable = TableQuery[MenuViewTable]
@@ -152,7 +150,13 @@ class MenuViewDao {
   private lazy val db = DatabaseConfig.forConfig[JdbcProfile]("postgres").db
 
   def upsert(menuView: MenuView): Future[Int] = db.run {
-    viewTable.insertOrUpdate(menuView)
+    menuView.uuid.fold {
+      viewTable
+        .map(t => (t.name.?, t.ingredients.?, t.recipe.?, t.link.?, t.selectedCount.?))
+        .insertOrUpdate((menuView.name, menuView.ingredients, menuView.recipe, menuView.link, menuView.selectedCount))
+    } { uuid =>
+      viewTable.insertOrUpdate(menuView)
+    }
   }
 
   def findByUuid(uuid: UUID): Future[Option[MenuView]] = db.run {

@@ -7,62 +7,40 @@
   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.0.xsd
   http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
 
-  <changeSet runAlways="true" author="kevin" id="init-table" dbms="postgresql">
-    <createTable tableName="event">
-      <column name="uuid" type="uuid">
-        <constraints primaryKey="true" nullable="false"/>
-      </column>
-      <column name="timestamp" type="timestamp with time zone">
-        <constraints nullable="false"/>
-      </column>
-      <column name="type" type="text">
-        <constraints nullable="false"/>
-      </column>
-      <column name="data" type="jsonb">
-        <constraints nullable="false"/>
-      </column>
-      <column name="aggregate" type="text">
-        <constraints nullable="false"/>
-      </column>
-    </createTable>
+  <changeSet runAlways="true" author="kevin" id="init" dbms="postgresql">
+    <sqlFile path="db/init_schema.sql" />
+  </changeSet>
 
-    <createTable tableName="menu_view">
-      <column name="uuid" type="uuid">
-        <constraints primaryKey="true" nullable="false"/>
-      </column>
-      <column name="name" type="text">
-        <constraints unique="true" nullable="false"/>
-      </column>
-      <column name="ingredients" type="text[]">
-        <constraints nullable="false"/>
-      </column>
-      <column name="recipe" type="text">
-        <constraints nullable="false"/>
-      </column>
-      <column name="link" type="text">
-        <constraints nullable="false"/>
-      </column>
-      <column name="selected_count" type="integer">
-        <constraints nullable="false"/>
-      </column>
-    </createTable>
+  <changeSet runAlways="true" author="kevin" id="auto-generate-uuid" dbms="postgresql">
+    <sql>
+      ALTER TABLE public.event ALTER COLUMN uuid      SET DEFAULT public.gen_random_uuid();
+      ALTER TABLE public.event ALTER COLUMN timestamp SET NOT NULL, ALTER COLUMN timestamp SET DEFAULT now();
 
-    <createTable tableName="user_view">
-      <column name="uuid" type="uuid">
-        <constraints primaryKey="true" nullable="false"/>
-      </column>
-      <column name="name" type="text">
-        <constraints unique="true" nullable="false"/>
-      </column>
-      <column name="email" type="text">
-        <constraints nullable="false"/>
-      </column>
-    </createTable>
+      ALTER TABLE public.menu_view ALTER COLUMN uuid           SET DEFAULT public.gen_random_uuid();
+      ALTER TABLE public.menu_view ALTER COLUMN name           SET NOT NULL;
+      ALTER TABLE public.menu_view ALTER COLUMN ingredients    SET NOT NULL;
+      ALTER TABLE public.menu_view ALTER COLUMN recipe         SET NOT NULL;
+      ALTER TABLE public.menu_view ALTER COLUMN link           SET NOT NULL;
+      ALTER TABLE public.menu_view ALTER COLUMN selected_count SET NOT NULL;
 
+      ALTER TABLE public.user_view ALTER COLUMN uuid  SET DEFAULT public.gen_random_uuid();
+      ALTER TABLE public.user_view ALTER COLUMN name  SET NOT NULL;
+      ALTER TABLE public.user_view ALTER COLUMN email SET NOT NULL;
+    </sql>
     <rollback>
-      <dropTable tableName="event"/>
-      <dropTable tableName="menu_view"/>
-      <dropTable tableName="user_view"/>
+      ALTER TABLE public.event ALTER COLUMN uuid DROP DEFAULT;
+      ALTER TABLE public.event ALTER COLUMN timestamp DROP NOT NULL, ALTER COLUMN timestamp DROP DEFAULT;
+
+      ALTER TABLE public.menu_view ALTER COLUMN uuid           DROP DEFAULT;
+      ALTER TABLE public.menu_view ALTER COLUMN name           DROP NOT NULL;
+      ALTER TABLE public.menu_view ALTER COLUMN ingredients    DROP NOT NULL;
+      ALTER TABLE public.menu_view ALTER COLUMN recipe         DROP NOT NULL;
+      ALTER TABLE public.menu_view ALTER COLUMN link           DROP NOT NULL;
+      ALTER TABLE public.menu_view ALTER COLUMN selected_count DROP NOT NULL;
+
+      ALTER TABLE public.user_view ALTER COLUMN uuid  DROP DEFAULT;
+      ALTER TABLE public.user_view ALTER COLUMN name  DROP NOT NULL;
+      ALTER TABLE public.user_view ALTER COLUMN email DROP NOT NULL;
     </rollback>
   </changeSet>
 </databaseChangeLog>
