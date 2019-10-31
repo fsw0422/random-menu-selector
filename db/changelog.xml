@@ -15,9 +15,6 @@
     <sql>
       ALTER TABLE public.event ALTER COLUMN uuid      SET DEFAULT public.gen_random_uuid();
       ALTER TABLE public.event ALTER COLUMN timestamp SET NOT NULL, ALTER COLUMN timestamp SET DEFAULT now();
-      ALTER TABLE public.event ALTER COLUMN type      SET NOT NULL;
-      ALTER TABLE public.event ALTER COLUMN aggregate SET NOT NULL;
-      ALTER TABLE public.event ALTER COLUMN data      SET NOT NULL;
 
       ALTER TABLE public.menu_view ALTER COLUMN uuid           SET DEFAULT public.gen_random_uuid();
       ALTER TABLE public.menu_view ALTER COLUMN name           SET NOT NULL;
@@ -33,9 +30,6 @@
     <rollback>
       ALTER TABLE public.event ALTER COLUMN uuid DROP DEFAULT;
       ALTER TABLE public.event ALTER COLUMN timestamp DROP NOT NULL, ALTER COLUMN timestamp DROP DEFAULT;
-      ALTER TABLE public.event ALTER COLUMN type      DROP NOT NULL;
-      ALTER TABLE public.event ALTER COLUMN aggregate DROP NOT NULL;
-      ALTER TABLE public.event ALTER COLUMN data      DROP NOT NULL;
 
       ALTER TABLE public.menu_view ALTER COLUMN uuid           DROP DEFAULT;
       ALTER TABLE public.menu_view ALTER COLUMN name           DROP NOT NULL;
