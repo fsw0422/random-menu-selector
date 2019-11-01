@@ -10,7 +10,9 @@ For the Integration test, we need to setup dependencies for database integration
    - OSX: `brew install postgresql`
    - Ubuntu: `apt install libpq-dev python3-dev`
 5. Create Python virtual environment and install dependencies
-   - `./setup.sh`
+   - `setup.sh`
+6. Build image for build environment
+   - `cicd/build-env/build.sh`
    
 Finally Run `cicd/ci.sh`
 
