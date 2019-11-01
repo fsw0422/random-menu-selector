@@ -44,8 +44,8 @@ ALTER TABLE public.menu_view OWNER TO postgres;
 
 CREATE TABLE IF NOT EXISTS public.user_view (
     uuid uuid NOT NULL PRIMARY KEY,
-    name text UNIQUE,
-    email text PRIMARY KEY
+    name text,
+    email text UNIQUE
 );
 
 ALTER TABLE public.user_view OWNER TO postgres;
