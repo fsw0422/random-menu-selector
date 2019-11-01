@@ -8,3 +8,4 @@ venv
 /.settings
 /RUNNING_PID
 **/.DS_Store
+cicd/production.env
