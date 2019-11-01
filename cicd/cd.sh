@@ -1,4 +1,4 @@
-#!/usr/bin/env	bash
+#!/usr/bin/env bash
 
 RUNNING_USER=""
 if [[ "$OSTYPE" == *"linux-gnu"* ]]; then
