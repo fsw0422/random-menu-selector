@@ -58,7 +58,7 @@ class EventDao {
    * It is not the same thing as the object definition
    */
   class EventTable(tag: Tag) extends Table[Event](tag, "event") {
-    def uuid = column[UUID]("uuid")
+    def uuid = column[UUID]("uuid", O.PrimaryKey)
     def timestamp = column[DateTime]("timestamp")
     def `type` = column[EventType]("type")
     def aggregate = column[String]("aggregate")

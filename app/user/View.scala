@@ -60,7 +60,7 @@ class UserViewDao {
 
   class UserViewTable(tag: Tag) extends Table[UserView](tag, "user_view") {
 
-    def uuid = column[UUID]("uuid")
+    def uuid = column[UUID]("uuid", O.PrimaryKey)
     def name = column[String]("name")
     def email = column[String]("email")
 

@@ -134,7 +134,7 @@ class MenuViewDao {
   import utils.db.PostgresProfile.api._
 
   class MenuViewTable(tag: Tag) extends Table[MenuView](tag, "menu_view") {
-    def uuid = column[UUID]("uuid")
+    def uuid = column[UUID]("uuid", O.PrimaryKey)
     def name = column[String]("name")
     def ingredients = column[Seq[String]]("ingredients")
     def recipe = column[String]("recipe")
