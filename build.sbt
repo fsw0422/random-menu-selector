@@ -13,7 +13,6 @@ scapegoatVersion in ThisBuild := "1.3.8"
 
 scalacOptions += "-Ypartial-unification"
 
-val monocleVersion = "1.4.0"
 val slickVersion = "3.2.3"
 val slickPgVersion = "0.17.0"
 
