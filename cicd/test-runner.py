@@ -29,15 +29,15 @@ db_container = PostgresContainer("postgres:9.6")
 with db_container as db:
     os.system(
         "docker run" +
-        " --network=host" +
+        " --network=host"
         " -u " + USER +
         " -w " + USER_HOME +
         " -v /var/run/docker.sock:/var/run/docker.sock" +
         " -v $HOME/.ivy2:" + USER_HOME + "/.ivy2" +
         " -v $HOME/.sbt:" + USER_HOME + "/.sbt" +
         " -v $PWD:" + USER_HOME + "/random_menu_selector" +
-        " -e POSTGRES_HOST=" + db.get_container_host_ip() +
-        " -e POSTGRES_PORT=" + db.get_exposed_port(5432) +
+        " -e POSTGRES_HOST=" + os.environ["POSTGRES_HOST"] +
+        " -e POSTGRES_PORT=" + db.get_exposed_port(os.environ["POSTGRES_PORT"]) + # Map port to the randomized port
         " -e POSTGRES_SSL_MODE=" + os.environ["POSTGRES_SSL_MODE"] +
         " -e POSTGRES_DB=" + os.environ["POSTGRES_DB"] +
         " -e POSTGRES_USER=" + os.environ["POSTGRES_USER"] +
