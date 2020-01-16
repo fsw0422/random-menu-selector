@@ -69,7 +69,6 @@ class AggregateTest extends FlatSpec
       ingredients = Some(Seq("ketchup", "mayo")),
       recipe = Some("blahblahblah"),
       link = Some("http://haha.com"),
-      selectedCount = Some(0),
       passwordAttempt = Some("fake")
     )
     val result = aggregate.register(Some(menu)).unsafeRunSync()
@@ -108,7 +107,6 @@ class AggregateTest extends FlatSpec
       ingredients = Some(Seq("fart", "toenail")),
       recipe = Some("dunno"),
       link = Some("http://heha.com"),
-      selectedCount = Some(0),
       passwordAttempt = Some("fake")
     )
     val result = aggregate.edit(Some(menu)).unsafeRunSync()
@@ -138,7 +136,6 @@ class AggregateTest extends FlatSpec
       ingredients = None,
       recipe = None,
       link = None,
-      selectedCount = Some(0),
       passwordAttempt = Some("fake")
     )
     val result = aggregate.remove(Some(menu)).unsafeRunSync()
@@ -169,7 +166,6 @@ class AggregateTest extends FlatSpec
       ingredients = None,
       recipe = None,
       link = None,
-      selectedCount = Some(0),
       passwordAttempt = Some("fake")
     )
     val event = Event(
@@ -178,7 +174,6 @@ class AggregateTest extends FlatSpec
       data = Some(Json.toJson(menu)),
       timestamp = Some(dateTime)
     )
-    doReturn(Future(Seq(event))).when(eventDao).findByTypeAndDataUuidSortedByTimestamp(any[Set[EventType]], any[UUID])
     And("menu to edit already exists")
     val menuView = MenuView(
       name = Some("Rice Crispy"),
@@ -207,12 +202,10 @@ class AggregateTest extends FlatSpec
     val eventArg = eventCaptor.getValue
     eventArg.`type`.get should equal(EventType.MENU_SELECTED)
     eventArg.aggregate.get should equal(Menu.aggregateName)
-    (eventArg.data.get \ "selectedCount").as[Int] should equal(menu.selectedCount.get + 1)
     And("menu update is called once")
     val menuViewCaptor: ArgumentCaptor[MenuView] = ArgumentCaptor.forClass(classOf[MenuView])
     verify(menuViewDao, times(1)).upsert(menuViewCaptor.capture())
     val menuViewArg = menuViewCaptor.getValue
-    menuViewArg.selectedCount.get should equal(menu.selectedCount.get + 1)
     And("send email is called once")
     val messageCaptor: ArgumentCaptor[Message] = ArgumentCaptor.forClass(classOf[Message])
     val addressCaptor: ArgumentCaptor[Array[Address]] = ArgumentCaptor.forClass(classOf[Array[Address]])
@@ -234,7 +227,6 @@ class AggregateTest extends FlatSpec
       case (s1: String, s2: String) => s1 should equal(s2)
     }
     (eventArg.data.get \ "link").as[String] should equal(menu.link.get)
-    (eventArg.data.get \ "selectedCount").as[Int] should equal(menu.selectedCount.get)
   }
 
   private def assertMenuView(menuViewArg: MenuView, menu: Menu): Unit = {
@@ -244,6 +236,5 @@ class AggregateTest extends FlatSpec
     }
     menuViewArg.recipe.get should equal(menu.recipe.get)
     menuViewArg.link.get should equal(menu.link.get)
-    menuViewArg.selectedCount.get should equal(menu.selectedCount.get)
   }
 }

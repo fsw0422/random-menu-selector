@@ -48,20 +48,31 @@ class MenuViewHandler @Inject()(
             ingredients = menu.ingredients,
             recipe = menu.recipe,
             link = menu.link,
-            selectedCount = menu.selectedCount
+            selectedCount = Option(0)
           )
         } { menuView =>
           menuView.copy(
             name = menu.name.fold(menuView.name)(name => Some(name)),
             ingredients = menu.ingredients.fold(menuView.ingredients)(ingredients => Some(ingredients)),
             recipe = menu.recipe.fold(menuView.recipe)(recipe => Some(recipe)),
-            link = menu.link.fold(menuView.link)(link => Some(link)),
-            selectedCount = menu.selectedCount.fold(menuView.selectedCount)(selectedCount => Some(selectedCount))
+            link = menu.link.fold(menuView.link)(link => Some(link))
           )
         }
         affectedRowNum <- IO.fromFuture(IO(menuViewDao.upsert(newMenuView)))
       } yield affectedRowNum
     }
+  }
+
+  def incrementSelectedCount(uuid: UUID): IO[Int] = {
+    for {
+      menuViewOpt <- IO.fromFuture(IO(menuViewDao.findByUuid(uuid)))
+      newMenuViewOpt = menuViewOpt.map { menuView =>
+        menuView.copy(selectedCount = menuView.selectedCount.map(_ + 1))
+      }
+      affectedRowNum <- newMenuViewOpt.fold(IO.pure(0)) { newMenuView =>
+        IO.fromFuture(IO(menuViewDao.upsert(newMenuView)))
+      }
+    } yield affectedRowNum
   }
 
   def delete(uuid: UUID): IO[Int] = {
