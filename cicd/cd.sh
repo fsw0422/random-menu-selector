@@ -14,6 +14,7 @@ echo ""
 docker run -it \
 	--env-file ${PWD}/cicd/production.env \
 	-v /var/run/docker.sock:/var/run/docker.sock \
+	-v ${HOME}/.docker:/root/.docker \
 	-v ${HOME}/.ivy2/cache:/root/.ivy2/cache \
 	-v ${HOME}/.sbt/boot:/root/.sbt/boot \
 	-v ${PWD}:/random_menu_selector \
