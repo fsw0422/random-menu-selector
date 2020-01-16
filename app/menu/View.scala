@@ -70,7 +70,7 @@ class MenuViewHandler @Inject()(
         menuView.copy(selectedCount = menuView.selectedCount.map(_ + 1))
       }
       affectedRowNum <- newMenuViewOpt.fold(IO.pure(0)) { newMenuView =>
-        IO.fromFuture(IO( menuViewDao.upsert(newMenuView)))
+        IO.fromFuture(IO(menuViewDao.upsert(newMenuView)))
       }
     } yield affectedRowNum
   }
