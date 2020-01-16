@@ -35,10 +35,6 @@ class EventHandler @Inject()(eventDao: EventDao) {
   def insert(event: Event): IO[Int] = {
     IO.fromFuture(IO(eventDao.insert(event)))
   }
-
-  def findByTypeAndDataUuidSortedByTimestamp(`types`: Set[EventType], uuid: UUID): IO[Seq[Event]] = {
-    IO.fromFuture(IO(eventDao.findByTypeAndDataUuidSortedByTimestamp(`types`, uuid)))
-  }
 }
 
 @Singleton
@@ -74,13 +70,5 @@ class EventDao {
 
   def insert(event: Event): Future[Int] = db.run {
     eventTable.map(t => (t.`type`.?, t.aggregate.?, t.data.?)) += ((event.`type`, event.aggregate, event.data))
-  }
-
-  def findByTypeAndDataUuidSortedByTimestamp(`types`: Set[EventType], uuid: UUID): Future[Seq[Event]] = db.run {
-    eventTable
-      .filter(event => event.`type` inSet `types`)
-      .filter(event => event.data +>> "uuid" === uuid.toString)
-      .sortBy(event => event.timestamp.desc)
-      .result
   }
 }

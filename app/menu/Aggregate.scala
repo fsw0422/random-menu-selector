@@ -16,7 +16,6 @@ final case class Menu(
   ingredients: Option[Seq[String]],
   recipe: Option[String],
   link: Option[String],
-  selectedCount: Option[Int],
   passwordAttempt: Option[String]
 ) {
 
@@ -57,15 +56,14 @@ class Aggregate @Inject()(
     menuOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { menu =>
       authenticate(menu) { menu =>
         menu.validateRegisterParams(returnError[String](ResponseMessage.PARAM_MISSING)) { menu =>
-          val newMenu = menu.copy(selectedCount = Some(0))
           val event = Event(
             `type` = Some(EventType.MENU_CREATED),
             aggregate = Some(Menu.aggregateName),
-            data = Some(Json.toJson(newMenu))
+            data = Some(Json.toJson(menu))
           )
           for {
             eventResult <- eventHandler.insert(event)
-            viewResult <- menuViewHandler.createOrUpdate(newMenu)
+            viewResult <- menuViewHandler.createOrUpdate(menu)
           } yield {
             (eventResult, viewResult) match {
               case (1, 1) =>
@@ -131,30 +129,14 @@ class Aggregate @Inject()(
 
   def selectMenu(uuidOpt: Option[UUID]): IO[Either[String, String]] = {
     uuidOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { selectedUuid =>
+      val event = Event(
+        `type` = Some(EventType.MENU_SELECTED),
+        aggregate = Some(Menu.aggregateName),
+        data = Some(Json.obj("uuid" -> Json.toJson(selectedUuid)))
+      )
       for {
-        latestSelectedMenuEvents <- getLatestSelectedMenuEvents(selectedUuid)
-        emptyMenu = Menu(
-          uuid = Some(selectedUuid),
-          name = None,
-          ingredients = None,
-          recipe = None,
-          link = None,
-          selectedCount = Some(0),
-          passwordAttempt = None
-        )
-        newMenu = latestSelectedMenuEvents.headOption.fold(emptyMenu) { latestSelectedMenuEvent =>
-          latestSelectedMenuEvent.data.fold(emptyMenu) { data =>
-            val latestSelectedMenu = data.as[Menu]
-            latestSelectedMenu.copy(selectedCount = latestSelectedMenu.selectedCount.map(_ + 1))
-          }
-        }
-        event = Event(
-          `type` = Some(EventType.MENU_SELECTED),
-          aggregate = Some(Menu.aggregateName),
-          data = Some(Json.toJson(newMenu))
-        )
         eventResult <- eventHandler.insert(event)
-        viewResult <- menuViewHandler.createOrUpdate(newMenu)
+        viewResult <- menuViewHandler.incrementSelectedCount(selectedUuid)
         _ <- menuViewHandler.sendMenuToAllUsers(selectedUuid)
       } yield {
         (eventResult, viewResult) match {
@@ -165,10 +147,6 @@ class Aggregate @Inject()(
         }
       }
     }
-  }
-
-  private def getLatestSelectedMenuEvents(uuid: UUID): IO[Seq[Event]] = {
-    eventHandler.findByTypeAndDataUuidSortedByTimestamp(Set(EventType.MENU_SELECTED), uuid)
   }
 
   private def authenticate[R](menu: Menu, password: String = config.getString("write.password"))
