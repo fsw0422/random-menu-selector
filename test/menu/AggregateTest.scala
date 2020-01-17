@@ -91,7 +91,7 @@ class AggregateTest extends FlatSpec
     doReturn(Future(1)).when(menuViewDao).upsert(any[MenuView])
     And("menu exists")
     val menuView = MenuView(
-      uuid = Some(UUID.randomUUID()),
+      uuid = Some(uuid),
       name = Some("Rice Crispy"),
       ingredients = Some(Seq("ketchup", "mayo")),
       recipe = Some("blahblahblah"),
@@ -102,7 +102,7 @@ class AggregateTest extends FlatSpec
 
     When("Edit menu")
     val menu = Menu(
-      uuid = Some(UUID.randomUUID()),
+      uuid = Some(uuid),
       name = Some("Rice Dipspy"),
       ingredients = Some(Seq("fart", "toenail")),
       recipe = Some("dunno"),
@@ -132,7 +132,7 @@ class AggregateTest extends FlatSpec
 
     When("Remove menu")
     val menu = Menu(
-      uuid = Some(UUID.randomUUID()),
+      uuid = Some(uuid),
       name = None,
       ingredients = None,
       recipe = None,
@@ -161,18 +161,9 @@ class AggregateTest extends FlatSpec
     doReturn(Future(1)).when(eventDao).insert(any[Event])
     And("menu update is successful")
     doReturn(Future(1)).when(menuViewDao).upsert(any[MenuView])
-    And("select menu event exists")
-    val menu = Menu(
-      uuid = Some(UUID.randomUUID()),
-      name = None,
-      ingredients = None,
-      recipe = None,
-      link = None,
-      passwordAttempt = Some("fake")
-    )
     And("menu to edit already exists")
     val menuView = MenuView(
-      uuid = Some(UUID.randomUUID()),
+      uuid = Some(uuid),
       name = Some("Rice Crispy"),
       ingredients = Some(Seq("ketchup", "mayo")),
       recipe = Some("blahblahblah"),
