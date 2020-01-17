@@ -12,7 +12,6 @@ import org.junit.runner.RunWith
 import org.mockito.{ArgumentCaptor, ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, GivenWhenThen, Matchers}
-import play.api.libs.json.Json
 import user.{UserView, UserViewDao}
 import utils.{EmailSender, ResponseMessage}
 
@@ -46,8 +45,6 @@ class AggregateTest extends FlatSpec
     transport = mock[Transport]
     val session: Session = Session.getInstance(new Properties())
     val emailSender: EmailSender = new EmailSender(session, transport)
-    // In real CQRS, reaching the view handler will be a network boundary cross,
-    // but as of now, since it's composed by a single IO monad, it is tested as a whole
     val eventHandler: EventHandler = new EventHandler(eventDao)
     val menuViewHandler: MenuViewHandler = new MenuViewHandler(config, emailSender, menuViewDao, userViewDao)
 
@@ -65,6 +62,7 @@ class AggregateTest extends FlatSpec
 
     When("Register menu")
     val menu = Menu(
+      uuid = None,
       name = Some("Rice Crispy"),
       ingredients = Some(Seq("ketchup", "mayo")),
       recipe = Some("blahblahblah"),
@@ -93,6 +91,7 @@ class AggregateTest extends FlatSpec
     doReturn(Future(1)).when(menuViewDao).upsert(any[MenuView])
     And("menu exists")
     val menuView = MenuView(
+      uuid = Some(UUID.randomUUID()),
       name = Some("Rice Crispy"),
       ingredients = Some(Seq("ketchup", "mayo")),
       recipe = Some("blahblahblah"),
@@ -103,6 +102,7 @@ class AggregateTest extends FlatSpec
 
     When("Edit menu")
     val menu = Menu(
+      uuid = Some(UUID.randomUUID()),
       name = Some("Rice Dipspy"),
       ingredients = Some(Seq("fart", "toenail")),
       recipe = Some("dunno"),
@@ -132,6 +132,7 @@ class AggregateTest extends FlatSpec
 
     When("Remove menu")
     val menu = Menu(
+      uuid = Some(UUID.randomUUID()),
       name = None,
       ingredients = None,
       recipe = None,
@@ -162,20 +163,16 @@ class AggregateTest extends FlatSpec
     doReturn(Future(1)).when(menuViewDao).upsert(any[MenuView])
     And("select menu event exists")
     val menu = Menu(
+      uuid = Some(UUID.randomUUID()),
       name = None,
       ingredients = None,
       recipe = None,
       link = None,
       passwordAttempt = Some("fake")
     )
-    val event = Event(
-      `type` = Some(EventType.MENU_SELECTED),
-      aggregate = Some(Menu.aggregateName),
-      data = Some(Json.toJson(menu)),
-      timestamp = Some(dateTime)
-    )
     And("menu to edit already exists")
     val menuView = MenuView(
+      uuid = Some(UUID.randomUUID()),
       name = Some("Rice Crispy"),
       ingredients = Some(Seq("ketchup", "mayo")),
       recipe = Some("blahblahblah"),

@@ -3,6 +3,7 @@ package user
 import java.util.UUID
 
 import cats.effect.IO
+import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import slick.basic.DatabaseConfig
@@ -22,24 +23,27 @@ object UserView {
 }
 
 @Singleton
-class UserViewHandler @Inject()(userViewDao: UserViewDao) {
+class UserViewHandler @Inject()(userViewDao: UserViewDao) extends LazyLogging {
 
   def createOrUpdate(user: User): IO[Int] = {
-    user.uuid.fold(IO.pure(0)) { userUuid =>
+    user.uuid.fold {
+      logger.error("UUID should not be None in UserViewHandler.CreateOrUpdate")
+      IO.pure(0)
+    } { userUuid =>
       for {
         userViewOpt <- IO.fromFuture(IO(userViewDao.findByUuid(userUuid)))
-        newUserView = userViewOpt.fold {
+        createdOrUpdatedUserView = userViewOpt.fold(
           UserView(
             email = user.email,
             name = user.name
           )
-        } { userView =>
+        )(userView =>
           userView.copy(
             email = userView.email.fold(userView.email)(email => Some(email)),
             name = userView.name.fold(userView.name)(name => Some(name))
           )
-        }
-        affectedRowNum <- IO.fromFuture(IO(userViewDao.upsert(newUserView)))
+        )
+        affectedRowNum <- IO.fromFuture(IO(userViewDao.upsert(createdOrUpdatedUserView)))
       } yield affectedRowNum
     }
   }
@@ -73,13 +77,11 @@ class UserViewDao {
   private lazy val db = DatabaseConfig.forConfig[JdbcProfile]("postgres").db
 
   def upsert(userView: UserView): Future[Int] = db.run {
-    userView.uuid.fold {
+    userView.uuid.fold(
       viewTable
         .map(t => (t.name.?, t.email.?))
         .insertOrUpdate((userView.name, userView.email))
-    } { uuid =>
-      viewTable.insertOrUpdate(userView)
-    }
+    )(uuid => viewTable.insertOrUpdate(userView))
   }
 
   def findByUuid(uuid: UUID): Future[Option[UserView]] = db.run {

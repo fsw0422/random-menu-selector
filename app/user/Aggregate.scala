@@ -49,14 +49,15 @@ class Aggregate @Inject()(
   def signUp(userOpt: Option[User]): IO[Either[String, String]] = {
     userOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { user =>
       user.validateRegisterParams(returnError[String](ResponseMessage.PARAM_MISSING)) { user =>
+        val createOrUpdateUser = user.uuid.fold(user.copy(uuid = Option(UUID.randomUUID())))(uuid => user)
         val event = Event(
           `type` = Some(EventType.USER_CREATED),
           aggregate = Some(User.aggregateName),
-          data = Some(Json.toJson(user)),
+          data = Some(Json.toJson(createOrUpdateUser))
         )
         for {
           eventResult <- eventHandler.insert(event)
-          viewResult <- userViewHandler.createOrUpdate(user)
+          viewResult <- userViewHandler.createOrUpdate(createOrUpdateUser)
         } yield {
           (eventResult, viewResult) match {
             case (1, 1) =>
