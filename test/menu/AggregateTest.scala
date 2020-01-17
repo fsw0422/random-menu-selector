@@ -33,7 +33,6 @@ class AggregateTest extends FlatSpec
   private var aggregate: Aggregate = _
 
   private val uuid = UUID.fromString("123e4567-e89b-12d3-a456-426655440001")
-  private val dateTime = new DateTime(1568326272)
 
   override def beforeEach: Unit = {
     eventDao = mock[EventDao]
