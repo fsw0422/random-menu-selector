@@ -6,7 +6,7 @@ import cats.effect.IO
 import com.typesafe.config.Config
 import event.{Event, EventHandler, EventType}
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 import utils.ResponseMessage
 import utils.ResponseMessage._
 
@@ -59,7 +59,7 @@ class Aggregate @Inject()(
           val event = Event(
             `type` = Some(EventType.MENU_CREATED),
             aggregate = Some(Menu.aggregateName),
-            data = Some(Json.toJson(menu))
+            data = Some(Json.toJson(menu).as[JsObject] - "passwordAttempt")
           )
           for {
             eventResult <- eventHandler.insert(event)
@@ -84,7 +84,7 @@ class Aggregate @Inject()(
           val event = Event(
             `type` = Some(EventType.MENU_UPDATED),
             aggregate = Some(Menu.aggregateName),
-            data = Some(Json.toJson(menu))
+            data = Some(Json.toJson(menu).as[JsObject] - "passwordAttempt")
           )
           for {
             eventResult <- eventHandler.insert(event)
