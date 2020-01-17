@@ -46,7 +46,7 @@ docker run -it \
 	-v "${HOME}"/.sbt/boot:${USER_HOME}/.sbt/boot \
 	-v "${PWD}":"${USER_HOME}"/random_menu_selector \
 	fsw0422/random_menu_selector/cicd:latest \
-	bash -c "docker login && cd ${USER_HOME}/random_menu_selector && db/evolve.sh && sbt docker:publish"
+	bash -c "docker login && cd ${USER_HOME}/random_menu_selector && db/evolve.sh && sbt '"';clean ;docker:publish'"'"
 
 if [ $? -eq 0 ]
 then

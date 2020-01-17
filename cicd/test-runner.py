@@ -46,5 +46,5 @@ with db_container as db:
         " -e EMAIL_USER=" + os.environ["EMAIL_USER"] +
         " -e EMAIL_PASSWORD=" + os.environ["EMAIL_PASSWORD"] +
         " fsw0422/random_menu_selector/cicd:latest" +
-        " bash -c \"cd " + USER_HOME + "/random_menu_selector && db/evolve.sh && sbt test\""
+        " bash -c \"cd " + USER_HOME + "/random_menu_selector && db/evolve.sh && sbt \\\";clean ;test\\\"\""
     )
