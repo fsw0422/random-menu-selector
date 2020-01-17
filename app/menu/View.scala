@@ -4,6 +4,7 @@ import java.util.UUID
 
 import cats.effect.IO
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.LazyLogging
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import slick.basic.DatabaseConfig
@@ -14,7 +15,7 @@ import utils.{Email, EmailSender}
 import scala.concurrent.Future
 
 final case class MenuView(
-  uuid: Option[UUID] = Some(UUID.randomUUID()),
+  uuid: Option[UUID],
   name: Option[String],
   ingredients: Option[Seq[String]],
   recipe: Option[String],
@@ -33,32 +34,36 @@ class MenuViewHandler @Inject()(
   emailSender: EmailSender,
   menuViewDao: MenuViewDao,
   userViewDao: UserViewDao
-) {
+) extends LazyLogging {
 
   private val emailUser = config.getString("email.user")
   private val emailPassword = config.getString("email.password")
 
   def createOrUpdate(menu: Menu): IO[Int] = {
-    menu.uuid.fold(IO.pure(0)) { menuUuid =>
+    menu.uuid.fold {
+      logger.error("UUID should not be None in MenuViewHandler.CreateOrUpdate")
+      IO.pure(0)
+    } { menuUuid =>
       for {
         menuViewOpt <- IO.fromFuture(IO(menuViewDao.findByUuid(menuUuid)))
-        newMenuView = menuViewOpt.fold {
+        createdOrUpdatedMenuView = menuViewOpt.fold(
           MenuView(
+            uuid = menu.uuid,
             name = menu.name,
             ingredients = menu.ingredients,
             recipe = menu.recipe,
             link = menu.link,
             selectedCount = Option(0)
           )
-        } { menuView =>
+        )(menuView =>
           menuView.copy(
             name = menu.name.fold(menuView.name)(name => Some(name)),
             ingredients = menu.ingredients.fold(menuView.ingredients)(ingredients => Some(ingredients)),
             recipe = menu.recipe.fold(menuView.recipe)(recipe => Some(recipe)),
             link = menu.link.fold(menuView.link)(link => Some(link))
           )
-        }
-        affectedRowNum <- IO.fromFuture(IO(menuViewDao.upsert(newMenuView)))
+        )
+        affectedRowNum <- IO.fromFuture(IO(menuViewDao.upsert(createdOrUpdatedMenuView)))
       } yield affectedRowNum
     }
   }
@@ -66,11 +71,11 @@ class MenuViewHandler @Inject()(
   def incrementSelectedCount(uuid: UUID): IO[Int] = {
     for {
       menuViewOpt <- IO.fromFuture(IO(menuViewDao.findByUuid(uuid)))
-      newMenuViewOpt = menuViewOpt.map { menuView =>
+      incrementedMenuViewOpt = menuViewOpt.map { menuView =>
         menuView.copy(selectedCount = menuView.selectedCount.map(_ + 1))
       }
-      affectedRowNum <- newMenuViewOpt.fold(IO.pure(0)) { newMenuView =>
-        IO.fromFuture(IO(menuViewDao.upsert(newMenuView)))
+      affectedRowNum <- incrementedMenuViewOpt.fold(IO.pure(0)) { menuView =>
+        IO.fromFuture(IO(menuViewDao.upsert(menuView)))
       }
     } yield affectedRowNum
   }
@@ -161,13 +166,11 @@ class MenuViewDao {
   private lazy val db = DatabaseConfig.forConfig[JdbcProfile]("postgres").db
 
   def upsert(menuView: MenuView): Future[Int] = db.run {
-    menuView.uuid.fold {
+    menuView.uuid.fold(
       viewTable
         .map(t => (t.name.?, t.ingredients.?, t.recipe.?, t.link.?, t.selectedCount.?))
         .insertOrUpdate((menuView.name, menuView.ingredients, menuView.recipe, menuView.link, menuView.selectedCount))
-    } { uuid =>
-      viewTable.insertOrUpdate(menuView)
-    }
+    )(uuid => viewTable.insertOrUpdate(menuView))
   }
 
   def findByUuid(uuid: UUID): Future[Option[MenuView]] = db.run {

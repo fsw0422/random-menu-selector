@@ -43,4 +43,15 @@
       ALTER TABLE public.user_view ALTER COLUMN email DROP NOT NULL;
     </rollback>
   </changeSet>
+
+  <changeSet runAlways="true" author="kevin" id="drop-auto-generate-uuid-view-table" dbms="postgresql">
+    <sql>
+      ALTER TABLE public.menu_view ALTER COLUMN uuid DROP DEFAULT;
+      ALTER TABLE public.user_view ALTER COLUMN uuid DROP DEFAULT;
+    </sql>
+    <rollback>
+      ALTER TABLE public.menu_view ALTER COLUMN uuid SET DEFAULT public.gen_random_uuid();
+      ALTER TABLE public.user_view ALTER COLUMN uuid SET DEFAULT public.gen_random_uuid();
+    </rollback>
+  </changeSet>
 </databaseChangeLog>

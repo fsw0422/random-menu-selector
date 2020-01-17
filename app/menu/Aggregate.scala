@@ -11,7 +11,7 @@ import utils.ResponseMessage
 import utils.ResponseMessage._
 
 final case class Menu(
-  uuid: Option[UUID] = Some(UUID.randomUUID()),
+  uuid: Option[UUID],
   name: Option[String],
   ingredients: Option[Seq[String]],
   recipe: Option[String],
@@ -56,14 +56,15 @@ class Aggregate @Inject()(
     menuOpt.fold(returnError[String](ResponseMessage.PARAM_ERROR)) { menu =>
       authenticate(menu) { menu =>
         menu.validateRegisterParams(returnError[String](ResponseMessage.PARAM_MISSING)) { menu =>
+          val createOrUpdateMenu = menu.uuid.fold(menu.copy(uuid = Option(UUID.randomUUID())))(uuid => menu)
           val event = Event(
             `type` = Some(EventType.MENU_CREATED),
             aggregate = Some(Menu.aggregateName),
-            data = Some(Json.toJson(menu).as[JsObject] - "passwordAttempt")
+            data = Some(Json.toJson(createOrUpdateMenu).as[JsObject] - "passwordAttempt")
           )
           for {
             eventResult <- eventHandler.insert(event)
-            viewResult <- menuViewHandler.createOrUpdate(menu)
+            viewResult <- menuViewHandler.createOrUpdate(createOrUpdateMenu)
           } yield {
             (eventResult, viewResult) match {
               case (1, 1) =>
