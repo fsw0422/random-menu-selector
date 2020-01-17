@@ -40,7 +40,7 @@ class MenuViewHandler @Inject()(
   private val emailPassword = config.getString("email.password")
 
   def createOrUpdate(menu: Menu): IO[Int] = {
-    menu.uuid.fold{
+    menu.uuid.fold {
       logger.error("UUID should not be None in MenuViewHandler.CreateOrUpdate")
       IO.pure(0)
     } { menuUuid =>
