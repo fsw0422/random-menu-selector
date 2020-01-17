@@ -2,12 +2,7 @@
 <configuration>
   <include resource="logback-base.xml" />
 
-  <root level="DEBUG">
+  <root level="INFO">
     <appender-ref ref="STDOUT_ASYNC"/>
   </root>
-
-  <logger name="play" level="DEBUG" />
-  <logger name="application" level="DEBUG" />
-  <logger name="slick.jdbc.JdbcBackend.statement" level="DEBUG" />
-  <logger name="slick.jdbc.StatementInvoker.result" level="DEBUG" />
 </configuration>

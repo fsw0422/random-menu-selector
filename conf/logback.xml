@@ -2,7 +2,7 @@
 <configuration>
   <include resource="logback-base.xml" />
 
-  <root level="INFO">
+  <root level="ERROR">
     <appender-ref ref="STDOUT_ASYNC"/>
   </root>
 </configuration>
