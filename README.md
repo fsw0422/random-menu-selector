@@ -1,20 +1,17 @@
 # How to run test
 
-For the Integration test, we need to setup dependencies for database integration
+For database integration test, we need to setup dependencies
 
 1. Install [Docker](https://www.docker.com)
 2. Install [Python3 & PIP3](https://www.python.org/downloads)
-3. Install [Postgresql](https://www.postgresql.org) development environment
-   - OSX: `brew install postgresql`
-   - Ubuntu: `apt install libpq-dev python3-dev`
-4. Create Python virtual environment and install dependencies
-   - `setup.sh`
-5. Build image for build environment
+2. **(Mac users only)** [Homebrew](https://brew.sh)
+3. Create Python virtual environment and install `test-containers` package and it's dependencies
+   - `cicd/setup-test-containers.sh`
+4. Build image for build environment
    - `cicd/build-env/build.sh`
    
 Finally Run `cicd/ci.sh`
 
-
 # How to develop
 
-On top of the test dependencies, install **_OpenJdk 8_** and **_SBT_**
+On top of the above dependencies, install **_OpenJdk 8_** and **_SBT_**
