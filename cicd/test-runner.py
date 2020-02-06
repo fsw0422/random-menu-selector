@@ -8,10 +8,10 @@ OS_TYPE = platform.system()
 
 USER = ""
 USER_HOME = ""
-if OS_TYPE == "Linux":
+if "Linux" in OS_TYPE:
     USER = os.environ["USER"]
     USER_HOME = "/home/" + USER
-elif OS_TYPE == "Darwin":
+elif "Darwin" in OS_TYPE:
     USER = "root"
     USER_HOME = "/" + USER
 else:
