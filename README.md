@@ -4,8 +4,8 @@ For database integration test, we need to setup dependencies
 
 1. Install [Docker](https://www.docker.com)
 2. Install [Python3 & PIP3](https://www.python.org/downloads)
-2. **(Mac users only)** [Homebrew](https://brew.sh)
-3. Create Python virtual environment and install `test-containers` package and it's dependencies and build image for build environment
+3. **(Mac users only)** [Homebrew](https://brew.sh)
+4. Create Python virtual environment and install `test-containers` package and it's dependencies and build image for build environment
    - `cicd/setup.sh`
    
 Finally Run `cicd/ci.sh`
