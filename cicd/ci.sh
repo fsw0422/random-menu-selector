@@ -5,5 +5,5 @@ export POSTGRES_USER=postgres # Always sync this value with PROD value due to in
 export POSTGRES_PASSWORD=fake
 
 source venv/bin/activate
-cicd/test-runner.py
+cicd/test-runner.py "$1"
 deactivate
