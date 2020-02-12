@@ -8,7 +8,7 @@ For database integration test, we need to setup dependencies
 4. Create Python virtual environment and install `test-containers` package and it's dependencies and build image for build environment
    - `cicd/setup.sh`
    
-Finally Run `cicd/ci.sh`
+Finally Run `cicd/ci.sh` (if want to run in debug mode, add the `-d` flag)
 
 # How to develop
 

@@ -37,5 +37,4 @@ lazy val RandomMenuSelector = (project in file("."))
   .enablePlugins(DockerPlugin)
   .enablePlugins(ClasspathJarPlugin)
 
-fork in run := true
-fork in Test := false
+fork in (Test, run) := true
