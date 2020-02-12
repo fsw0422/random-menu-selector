@@ -3,9 +3,8 @@
 """
 We use the build image for testing, to provide the same environment as CICD pipeline
 This will provide us the following advantages
-1. We can actually test the build image itself satisfies the dependencies before pushing to actual CICD environment
-2. Scripts that needs to be ran globally once before the the CD process (such as database schema evolution)
-   can be properly tested
+1. We can actually test the build image itself if it satisfies the dependencies before pushing to actual CICD environment
+2. Scripts that needs to be ran only once globally prior to the the CD process (such as database schema evolution) can be properly tested
 In the end, CICD pipeline is just a naive sequential command executor
 """
 
