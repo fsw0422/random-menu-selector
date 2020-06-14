@@ -2,31 +2,29 @@
 
 ## Prerequisites
 - [Docker](https://www.docker.com)
-- [Python3.7 & PIP](https://www.python.org/downloads)
-
-Platforms other than **_Mac_** and **_Debian based Linux_** are not supported 
-This is due to the fact that the `test-container` library depends on system binaries for database access
-- Mac users
-  - [Homebrew](https://brew.sh)
-- Debian based Linux users
-  - [Apt](https://en.wikipedia.org/wiki/APT_(software))
+- [Python 3.7 & PIP](https://www.python.org/downloads)
+- Run the following command
+  ```
+  $ cicd/setup.sh
+  ```
 
 ## Run tests
 ```
-# Needs to be ran only once
-$ cicd/setup.sh
-
-# The test command to run all tests
 $ cicd/venv/bin/python cicd/ci.py -c ';clean ;test'
 ```
 
 ## Development
-On top of the **_Prerequisites_**, **_JDK 8_** and **_SBT_** is required
+In order to develop and test, meet the following dependencies on top of the **_Prerequisites_**
+- JDK 8
+- SBT 1.2.x
 
 When debugging with **_Intellij_**, make sure
 - For Unit Tests (All test files except the `test/IntegrationTest.scala`)
   - Select **_ScalaTest_** and import `cicd/test.env` file from **_EnvFile_** tab in test configurations
 - For Integration Tests (The `test/IntegrationTest.scala` file)
-  - `$ cicd/venv/bin/python cicd/ci.py -d -c 'testOnly *IntegrationTest -- -z "test_name"'`
+  - Run the following command
+    ```
+    $ cicd/venv/bin/python cicd/ci.py -d -c 'testOnly *IntegrationTest -- -z "test_name"'
+    ```
   - Select **_Remote Debug_** in test configurations and run until the debugger attaches to the port
 
