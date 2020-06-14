@@ -10,7 +10,7 @@
 
 ## Run tests
 ```
-$ cicd/venv/bin/python cicd/ci.py -c ';clean ;test'
+$ cicd/ci.sh
 ```
 
 ## Development
@@ -24,7 +24,7 @@ When debugging with **_Intellij_**, make sure
 - For Integration Tests (The `test/IntegrationTest.scala` file)
   - Run the following command
     ```
-    $ cicd/venv/bin/python cicd/ci.py -d -c 'testOnly *IntegrationTest -- -z "test_name"'
+    $ cicd/venv/bin/python cicd/test.py -d -c 'testOnly *IntegrationTest -- -z "test_name"'
     ```
   - Select **_Remote Debug_** in test configurations and run until the debugger attaches to the port
 
