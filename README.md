@@ -3,12 +3,13 @@
 ## Prerequisites
 - [Docker](https://www.docker.com)
 - [Python3.7 & PIP](https://www.python.org/downloads)
+
+Platforms other than **_Mac_** and **_Debian based Linux_** are not supported 
+This is due to the fact that the `test-container` library depends on system binaries for database access
 - Mac users
   - [Homebrew](https://brew.sh)
 - Debian based Linux users
   - [Apt](https://en.wikipedia.org/wiki/APT_(software))
-  
-Platforms other than **_Mac_** and **_Debian based Linux_** are not supported 
 
 ## Run tests
 ```

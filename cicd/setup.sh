@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 echo ""
-echo "====================================="
+echo "=============================="
 echo "Environment detected [$OSTYPE]"
-echo "====================================="
+echo "=============================="
 echo ""
 
 # Install all native binary that `test-containers` depend on
@@ -14,7 +14,7 @@ elif [[ "$OSTYPE" == *"darwin"* ]]; then
 	xcode-select --install
 	brew install postgresql
 else
-	echo "Build environment does not support operating systems other than Mac or Linux Distros!"
+	echo "Build environment does not support operating systems other than Mac or Debian based Linux Distros!"
 	exit 1
 fi
 
