@@ -57,7 +57,7 @@ if [ $? -eq 0 ]; then
 	echo "Deployment Commencing"
 	echo "===================================="
 	echo ""
-	ssh root@fsw0422.com <<-EOF
+	ssh kev@fsw0422.com <<-EOF
 		git clone git@github.com:fsw0422/random-menu-selector.git || git -C ~/random-menu-selector pull
 		echo $password | gpg --batch --yes --passphrase-fd 0 ~/random-menu-selector/cicd/production.env.gpg
 
