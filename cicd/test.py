@@ -51,7 +51,7 @@ try:
     with postgres.with_name("random_menu_selector_db") as db:
         system("docker network create random_menu_selector_network")
         system("docker network connect random_menu_selector_network random_menu_selector_db")
-        system("mkdir -p {home}/.sbt && mkdir -p {home}/.ivy2".format(home=USER_HOME))
+        system("mkdir -p ${HOME}/.sbt && mkdir -p ${HOME}/.ivy2")
         test = " && ".join([
             "sbt compile",  # Liquibase requires db jar dependency
             "db/evolve.sh",
