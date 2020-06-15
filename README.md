@@ -2,7 +2,7 @@
 
 ## Prerequisites
 - [Docker](https://www.docker.com)
-- [Python 3.7+ with pip & venv](https://www.python.org/downloads)
+- [Python 3.6+ with pip & venv](https://www.python.org/downloads)
   - [Pyenv](https://github.com/pyenv/pyenv) is recommended for Python version management
   - [Direnv](https://direnv.net/) is recommended for switching virtual environments
 - Run the following command
