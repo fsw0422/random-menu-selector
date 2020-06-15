@@ -20,7 +20,7 @@ elif [[ "$OSTYPE" == *"darwin"* ]]; then
 	# These virtual machines do not have this problem since container to host userId mapping is not the same as Linux
 	# Also since some user IDs used in Mac is mapped to reserved user ID in Linux, we just use root by default
 	docker build \
-	  -t fsw0422/random_menu_selector/cicd:latest \
+		-t fsw0422/random_menu_selector/cicd:latest \
 		cicd/build-env
 else
 	echo "Build environment does not support operating systems other than Mac or Linux Distros!"

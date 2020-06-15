@@ -51,7 +51,9 @@ try:
     with postgres.with_name("random_menu_selector_db") as db:
         system("docker network create random_menu_selector_network")
         system("docker network connect random_menu_selector_network random_menu_selector_db")
+        system("mkdir -p {home}/.sbt && mkdir -p {home}/.ivy2".format(home=USER_HOME))
         test = " && ".join([
+            "sbt compile",  # Liquibase requires db jar dependency
             "db/evolve.sh",
             "sbt " + ["", "-jvm-debug 5005"][args.d] + " \\\"" + args.c + "\\\"",
         ])
@@ -65,7 +67,7 @@ try:
             "-w", USER_HOME + "/random_menu_selector",
             "-v", "/var/run/docker.sock:/var/run/docker.sock",
             "-v", "${HOME}/.ivy2:" + USER_HOME + "/.ivy2",
-            "-v", "${HOME}/.sbt/boot:" + USER_HOME + "/.sbt/boot",
+            "-v", "${HOME}/.sbt:" + USER_HOME + "/.sbt",
             "-v", "${PWD}:" + USER_HOME + "/random_menu_selector",
             "fsw0422/random_menu_selector/cicd:latest",
             "bash -c \"{cmd}\"".format(cmd=test),

@@ -8,5 +8,6 @@ venv
 .settings
 RUNNING_PID
 .envrc
+.python-version
 .DS_Store
 cicd/production.env
