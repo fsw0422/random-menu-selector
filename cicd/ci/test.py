@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from dotenv import load_dotenv
+from logging import basicConfig, info
 from os import system, environ
 from pathlib import Path
 from platform import system as os_type
@@ -24,7 +25,7 @@ def test(debug, sbt_cmd, user, user_home):
             system("mkdir -p ${HOME}/.sbt && mkdir -p ${HOME}/.ivy2")
             test = " && ".join([
                 "sbt compile",  # Liquibase requires db jar dependency
-                "db/evolve.sh",
+                "python schema.py",
                 "sbt " + ["", "-jvm-debug 5005"][debug] + " \\\"" + sbt_cmd + "\\\"",
             ])
             system(" ".join([
@@ -50,7 +51,7 @@ def test(debug, sbt_cmd, user, user_home):
 
 
 if __name__ == "__main__":
-    load_dotenv(dotenv_path=Path(".") / "test.env")
+    load_dotenv(dotenv_path=Path("") / "test.env")
 
     parser = ArgumentParser()
     parser.add_argument(
@@ -74,11 +75,8 @@ if __name__ == "__main__":
     if "Linux" in OS_TYPE:
         user_os = environ["USER"]
         user_home_os = "/home/" + user_os
-    elif "Darwin" in OS_TYPE:
+    else:
         user_os = "root"
         user_home_os = "/" + user_os
-    else:
-        print("Unsupported OS")
-        exit(1)
 
     test(args.d, args.c, user_os, user_home_os)

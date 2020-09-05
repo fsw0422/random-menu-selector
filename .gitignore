@@ -1,6 +1,7 @@
 logs
 target
 venv
+venv-unix
 .idea
 .idea_modules
 .classpath

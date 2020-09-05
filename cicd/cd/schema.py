@@ -1,4 +1,11 @@
-#!/usr/bin/env bash
+from subprocess import call
+
+print("")
+print("=============================")
+print("Database evolution commencing")
+print("=============================")
+print("")
+
 
 liquibase \
   --classpath=${HOME}/.ivy2/cache/org.postgresql/postgresql/bundles/postgresql-42.2.5.jar \

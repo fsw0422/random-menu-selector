@@ -9,12 +9,17 @@ RUN apt update \
 		wget \
 		unzip \
 		curl \
+		dirmngr \
 		apt-transport-https \
 		ca-certificates \
 		gnupg-agent \
 		software-properties-common \
 		python3 \
 		python3-pip
+
+# Python packages
+COPY requirements.txt /opt/requirements.txt
+RUN pip3 install -r /opt/requirements.txt
 
 # Docker
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
@@ -40,6 +45,13 @@ RUN wget https://github.com/liquibase/liquibase/releases/download/liquibase-pare
 	&& unzip /opt/liquibase.zip -d /opt/liquibase \
 	&& chmod +x /opt/liquibase/liquibase \
 	&& ln -s /opt/liquibase/liquibase /usr/local/bin
+
+# Terraform
+RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add - \
+    && apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+    && apt update \
+    && apt install -y \
+        terraform
 
 # Add custom user and group id (For Linux users)
 ARG USER_NAME

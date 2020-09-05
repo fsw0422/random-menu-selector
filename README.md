@@ -1,8 +1,8 @@
 # Random Menu Selector
 
 ## Prerequisites
-- [Docker](https://www.docker.com)
-- [Python 3.6+ with pip & venv](https://www.python.org/downloads)
+- [Docker 19.03.12](https://www.docker.com)
+- [Python 3 with Docker API installed](https://www.python.org/downloads)
   - [Pyenv](https://github.com/pyenv/pyenv) is recommended for Python version management
   - [Direnv](https://direnv.net/) is recommended for switching virtual environments
 - Run the following command

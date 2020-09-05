@@ -1,9 +1,0 @@
-version: "3"
-services:
-  random-menu-selector:
-    image: "fsw0422/random-menu-selector:latest"
-    restart: always
-    ports:
-      - "9000:9000"
-    env_file:
-      - production.env
